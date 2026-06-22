@@ -25,6 +25,26 @@
   function money(n){ return '$ ' + fmt.format(isFinite(n) ? n : 0); }
   function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 
+  function numeroProductoDesdeValor(valor){
+    var n = parseInt(String(valor || '').trim(), 10);
+    return isNaN(n) ? null : n;
+  }
+
+  function maxNumeroProductoExistente(){
+    var max = 0;
+    productos.forEach(function(p){
+      var nId = numeroProductoDesdeValor(p.id);
+      if (nId !== null && nId > max) max = nId;
+      var nCod = numeroProductoDesdeValor(p.codigo);
+      if (nCod !== null && nCod > max) max = nCod;
+    });
+    return max;
+  }
+
+  function nuevoIdProducto(){
+    return String(maxNumeroProductoExistente() + 1);
+  }
+
   function actualizarNumeroBoleta(){
     var el = document.getElementById('b-numero');
     if (el) el.value = String(contadorBoleta).padStart(4, '0');
@@ -700,8 +720,10 @@ return nuevo;
       cancelarEdicion();
       mostrarAviso('Producto actualizado ✅');
     } else {
-      productos.push({ id: uid(), nombre: nombre, precio: precio, codigo: codigo, categoriaId: categoriaId });
-      mostrarAviso('Producto agregado ✅');
+      var nuevoId = nuevoIdProducto();
+      if (!codigo) codigo = nuevoId;
+      productos.push({ id: nuevoId, nombre: nombre, precio: precio, codigo: codigo, categoriaId: categoriaId });
+      mostrarAviso('Producto agregado ✅ · N° ' + nuevoId);
     }
 
     document.getElementById('form-producto').reset();
