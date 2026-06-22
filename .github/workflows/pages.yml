@@ -1,0 +1,48 @@
+# Genera config.js en el deploy sin guardar claves en el repo.
+# Configurá estos Secrets en GitHub → Settings → Secrets and variables → Actions:
+#   SUPABASE_URL, SUPABASE_ANON_KEY, FAMILY_PIN
+
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Crear config.js desde secrets
+        run: |
+          cat > config.js << EOF
+          window.SODERIA_CONFIG = {
+            SUPABASE_URL: '${{ secrets.SUPABASE_URL }}',
+            SUPABASE_ANON_KEY: '${{ secrets.SUPABASE_ANON_KEY }}',
+            FAMILY_PIN: '${{ secrets.FAMILY_PIN }}'
+          };
+          EOF
+
+      - name: Subir artefacto Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Publicar Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,10 @@
+# Claves locales — no subir a GitHub
+config.js
+
+# Sistema / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Monolito viejo (opcional)
+productos-boletas_*.html
