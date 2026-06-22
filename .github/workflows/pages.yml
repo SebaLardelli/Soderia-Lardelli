@@ -1,5 +1,5 @@
-# Genera config.js en el deploy sin guardar claves en el repo.
-# Configurá estos Secrets en GitHub → Settings → Secrets and variables → Actions:
+# Publica en GitHub Pages sin subir claves al repo.
+# Secrets en Settings → Secrets and variables → Actions:
 #   SUPABASE_URL, SUPABASE_ANON_KEY, FAMILY_PIN
 
 name: Deploy GitHub Pages
@@ -25,37 +25,38 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Verificar secrets obligatorios
+      - name: Verificar secrets
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           FAMILY_PIN: ${{ secrets.FAMILY_PIN }}
         run: |
           if [ -z "$SUPABASE_URL" ]; then
-            echo "::error::Falta el secret SUPABASE_URL en GitHub → Settings → Secrets and variables → Actions"
+            echo "::error::Falta SUPABASE_URL en Secrets"
             exit 1
           fi
           if [ -z "$SUPABASE_ANON_KEY" ]; then
-            echo "::error::Falta el secret SUPABASE_ANON_KEY en GitHub → Settings → Secrets and variables → Actions"
+            echo "::error::Falta SUPABASE_ANON_KEY en Secrets"
             exit 1
           fi
           if [ -z "$FAMILY_PIN" ]; then
-            echo "::error::Falta el secret FAMILY_PIN en GitHub → Settings → Secrets and variables → Actions"
+            echo "::error::Falta FAMILY_PIN en Secrets"
             exit 1
           fi
           echo "Secrets OK"
 
-      - name: Crear config.js e inyectar en index.html
+      - name: Inyectar config en index.html
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           FAMILY_PIN: ${{ secrets.FAMILY_PIN }}
         run: node scripts/inject-config.js
 
-      - name: Verificar que la config quedó embebida
+      - name: Verificar config embebida
         run: |
           grep -q "window.SODERIA_CONFIG" index.html
           grep -q "SUPABASE_URL" index.html
+          grep -q "FAMILY_PIN" index.html
           echo "Config embebida OK"
 
       - name: Subir artefacto Pages

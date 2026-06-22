@@ -1,20 +1,15 @@
 const fs = require('fs');
 
 const cfg = {
-  SUPABASE_URL: process.env.SUPABASE_URL || '',
-  SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY || '',
-  FAMILY_PIN: process.env.FAMILY_PIN || ''
+  SUPABASE_URL: (process.env.SUPABASE_URL || '').trim(),
+  SUPABASE_ANON_KEY: (process.env.SUPABASE_ANON_KEY || '').trim(),
+  FAMILY_PIN: (process.env.FAMILY_PIN || '').trim()
 };
 
 if (!cfg.SUPABASE_URL || !cfg.SUPABASE_ANON_KEY || !cfg.FAMILY_PIN) {
-  console.error('Faltan variables SUPABASE_URL, SUPABASE_ANON_KEY o FAMILY_PIN');
+  console.error('Faltan secrets: SUPABASE_URL, SUPABASE_ANON_KEY y FAMILY_PIN en GitHub Actions');
   process.exit(1);
 }
-
-fs.writeFileSync(
-  'config.js',
-  'window.SODERIA_CONFIG = ' + JSON.stringify(cfg, null, 2) + ';\n'
-);
 
 const inline = '<script>window.SODERIA_CONFIG = ' + JSON.stringify(cfg) + ';</script>';
 let html = fs.readFileSync('index.html', 'utf8');
@@ -25,6 +20,6 @@ if (!marker.test(html)) {
   process.exit(1);
 }
 
-html = html.replace(marker, '<!-- SODERIA_CONFIG (inyectado en deploy) -->\n' + inline);
+html = html.replace(marker, '<!-- SODERIA_CONFIG (inyectado en deploy, no va al repo) -->\n' + inline);
 fs.writeFileSync('index.html', html);
-console.log('config.js e index.html listos para deploy');
+console.log('Config inyectada en index.html para deploy');

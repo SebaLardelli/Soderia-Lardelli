@@ -173,8 +173,8 @@
   }
 
   function configDisponible(){
-    var c = window.SODERIA_CONFIG;
-    return !!(c && (c.SUPABASE_URL || c.FAMILY_PIN));
+    var c = getConfig();
+    return !!(c.SUPABASE_URL && c.SUPABASE_ANON_KEY);
   }
 
   function mostrarErrorConfigFaltante(){
@@ -183,7 +183,7 @@
     var btn = document.getElementById('pin-btn');
     var hint = gate ? gate.querySelector('.pin-card p') : null;
     if (hint){
-      hint.textContent = 'No se cargó config.js. Si usás GitHub Pages, configurá los Secrets SUPABASE_URL, SUPABASE_ANON_KEY y FAMILY_PIN en el repo y volvé a publicar.';
+      hint.textContent = 'Falta la configuración. En GitHub: cargá los Secrets y publicá con el workflow «Deploy GitHub Pages». En tu PC: usá config.js local.';
     }
     if (input) input.style.display = 'none';
     if (btn) btn.style.display = 'none';

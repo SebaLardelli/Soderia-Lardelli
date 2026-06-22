@@ -1,4 +1,4 @@
-var CACHE = 'soderia-lardelli-v3';
+var CACHE = 'soderia-lardelli-v5';
 var ASSETS = [
   './',
   './index.html',
@@ -8,8 +8,7 @@ var ASSETS = [
   './manifest.webmanifest',
   './icons/logo.png',
   './icons/icon-192.png',
-  './icons/icon-512.png',
-  './config.js'
+  './icons/icon-512.png'
 ];
 
 self.addEventListener('install', function(event){

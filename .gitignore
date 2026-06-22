@@ -1,5 +1,6 @@
 # Claves locales — no subir a GitHub
 config.js
+js/cloud-config.js
 
 # Sistema / editor
 .DS_Store
