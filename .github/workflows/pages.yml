@@ -1,6 +1,9 @@
 # Publica en GitHub Pages sin subir claves al repo.
 # Secrets en Settings → Secrets and variables → Actions:
 #   SUPABASE_URL, SUPABASE_ANON_KEY, FAMILY_PIN
+#
+# Pages debe usar «GitHub Actions» como origen (no «Deploy from a branch»).
+# Este workflow intenta cambiarlo automáticamente al publicar.
 
 name: Deploy GitHub Pages
 
@@ -16,7 +19,7 @@ permissions:
 
 concurrency:
   group: pages-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -24,6 +27,24 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Cambiar Pages a GitHub Actions (no Jekyll desde main)
+        run: |
+          HTTP=$(curl -sS -o /tmp/pages-resp.json -w "%{http_code}" \
+            -X PUT \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/pages" \
+            -d '{"build_type":"workflow"}')
+          echo "Pages build_type → workflow (HTTP $HTTP)"
+          cat /tmp/pages-resp.json || true
+          if [ "$HTTP" != "204" ] && [ "$HTTP" != "200" ]; then
+            echo "::warning::No se pudo cambiar el origen de Pages. Andá a Settings → Pages → Build and deployment → Source: GitHub Actions"
+          fi
+
+      - name: Configurar Pages
+        uses: actions/configure-pages@v4
 
       - name: Verificar secrets
         env:
@@ -58,6 +79,7 @@ jobs:
           grep -q "SUPABASE_URL" index.html
           test -f config.js
           grep -q "SUPABASE_URL" config.js
+          test -f .nojekyll
           echo "Config embebida OK"
 
       - name: Subir artefacto Pages

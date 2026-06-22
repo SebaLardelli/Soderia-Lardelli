@@ -203,7 +203,7 @@
     var btn = document.getElementById('pin-btn');
     var hint = gate ? gate.querySelector('.pin-card p') : null;
     if (hint){
-      hint.textContent = 'Falta la configuración. En GitHub: cargá los Secrets y publicá con el workflow «Deploy GitHub Pages». En tu PC: usá config.js local.';
+      hint.textContent = 'Falta la configuración en GitHub Pages. En el repo: Settings → Pages → Source debe ser «GitHub Actions» (no «Deploy from a branch»). Cargá los Secrets (SUPABASE_URL, SUPABASE_ANON_KEY, FAMILY_PIN) y ejecutá el workflow «Deploy GitHub Pages». En tu PC: creá config.js local.';
     }
     if (input) input.style.display = 'none';
     if (btn) btn.style.display = 'none';
