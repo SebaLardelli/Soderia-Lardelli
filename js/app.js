@@ -70,6 +70,25 @@
     return calcularBoleta().lineas.length > 0;
   }
 
+  function ofrecerGuardarBoletaPendiente(mensaje){
+    if (!hayBoletaPendiente()) return true;
+    if (confirm(mensaje || 'Tenés productos en la boleta sin guardar en el historial. ¿Querés guardarla ahora?')){
+      return guardarBoletaEnHistorialInterno();
+    }
+    return true;
+  }
+
+  function confirmarDescartarBoletaPendiente(mensaje){
+    if (!hayBoletaPendiente()) return true;
+    return confirm(mensaje || '¿Continuar sin guardar? Se perderá la boleta actual.');
+  }
+
+  function resolverBoletaPendienteAntesDeReemplazar(mensajeGuardar, mensajeDescartar){
+    if (!ofrecerGuardarBoletaPendiente(mensajeGuardar)) return false;
+    if (hayBoletaPendiente() && !confirmarDescartarBoletaPendiente(mensajeDescartar)) return false;
+    return true;
+  }
+
   var historialDetalleAbiertoId = null;
   var pinResolver = null;
 
@@ -190,6 +209,8 @@
     document.getElementById('b-cliente-error').className = 'field-hint';
     document.getElementById('b-cliente-error').textContent = '';
     document.getElementById('b-fecha').value = hoyISO();
+    var pagadaEl = document.getElementById('b-pagada');
+    if (pagadaEl) pagadaEl.checked = false;
     renderListaBoleta();
     renderResumenBoleta();
 }
@@ -249,12 +270,20 @@
     return d && Array.isArray(d.productos) && d.productos.length > 0;
   }
 
+  function normalizarBoletaHistorial(h){
+    if (!h || typeof h !== 'object') return h;
+    if (h.pagada === undefined) h.pagada = false;
+    h.archivada = !!h.pagada;
+    if (h.recordatorioSemana === undefined) h.recordatorioSemana = 0;
+    return h;
+  }
+
   function aplicarPayload(datos){
     if (!datos) return;
     productos = datos.productos || [];
     categorias = Array.isArray(datos.categorias) ? datos.categorias : [];
     contadorBoleta = datos.contadorBoleta || 1;
-    historial = Array.isArray(datos.historial) ? datos.historial : [];
+    historial = Array.isArray(datos.historial) ? datos.historial.map(normalizarBoletaHistorial) : [];
     clientes = Array.isArray(datos.clientes) ? datos.clientes : [];
     sincronizarContadorBoleta();
     if (document.getElementById('b-negocio')){
@@ -447,6 +476,10 @@
 
   /* ===================== tabs ===================== */
   window.cambiarTab = function(tab){
+    var panelBoleta = document.getElementById('panel-boleta');
+    if (panelBoleta && panelBoleta.classList.contains('active') && tab !== 'boleta'){
+      if (!ofrecerGuardarBoletaPendiente('Tenés una boleta sin guardar. ¿Querés guardarla en el historial antes de cambiar de pestaña?')) return;
+    }
     var paneles = ['productos', 'boleta', 'historial'];
     paneles.forEach(function(p){
       var activo = p === tab;
@@ -1073,7 +1106,14 @@ return nuevo;
   window.renderProductos = renderProductos;
 
   window.nuevaBoleta = function(){
-    if (hayBoletaPendiente() && !confirm('¿Vaciar la boleta actual y empezar una nueva?')) return;
+    if (!resolverBoletaPendienteAntesDeReemplazar(
+      '¿Guardar esta boleta en el historial antes de empezar una nueva?',
+      '¿Empezar una boleta nueva sin guardar? Se perderá la boleta actual.'
+    )) return;
+    if (!hayBoletaPendiente()){
+      mostrarAviso('Boleta nueva lista 🧾');
+      return;
+    }
     contadorBoleta += 1;
     actualizarNumeroBoleta();
     limpiarBoletaActual();
@@ -1202,6 +1242,8 @@ return nuevo;
     if (!validarBoletaParaAccion()) return false;
     var calc = calcularBoleta();
     var cliente = document.getElementById('b-cliente').value.trim();
+    var pagadaEl = document.getElementById('b-pagada');
+    var pagada = pagadaEl ? pagadaEl.checked : false;
     var registro = {
       id: uid(),
       numero: document.getElementById('b-numero').value,
@@ -1212,8 +1254,11 @@ return nuevo;
       subtotal: calc.subtotal,
       descuentoMonto: calc.descuentoMonto,
       total: calc.total,
+      pagada: pagada,
+      archivada: pagada,
       guardadoEn: new Date().toISOString()
     };
+    if (pagada) registro.pagadaEn = registro.guardadoEn;
     historial.unshift(registro);
     contadorBoleta += 1;
     actualizarNumeroBoleta();
@@ -1223,6 +1268,8 @@ return nuevo;
     if (!opciones.silencioso){
       if (eraNuevo){
         mostrarAviso('Boleta guardada · «' + cliente + '» agregado a clientes ✅');
+      } else if (pagada){
+        mostrarAviso('Boleta guardada como pagada y archivada ✅');
       } else {
         mostrarAviso('Boleta guardada · siguiente N° ' + String(contadorBoleta).padStart(4, '0'));
       }
@@ -1237,12 +1284,56 @@ return nuevo;
   function actualizarStatHistorial(){
     var el = document.getElementById('stat-historial');
     if (el) el.textContent = historial.length;
+    var countEl = document.getElementById('historial-count');
+    if (countEl){
+      var pendientes = historial.filter(function(h){ return !h.pagada; }).length;
+      countEl.textContent = '(' + pendientes + ' pendientes)';
+    }
+  }
+
+  function historialCoincideBusqueda(h, query){
+    if (!query) return true;
+    var cliente = (h.cliente || '').toLowerCase();
+    var numero = (h.numero || '').toLowerCase();
+    return cliente.indexOf(query) !== -1 || numero.indexOf(query) !== -1;
+  }
+
+  function htmlPagoBoleta(h, inputId){
+    var pagada = !!h.pagada;
+    var idAttr = inputId ? ' id="' + inputId + '"' : '';
+    return '<label class="pago-check" title="' + (pagada ? 'Desmarcar pago' : 'Marcar como pagada') + '">' +
+      '<input type="checkbox" data-action="toggle-pago-historial" data-id="' + escapeHtml(h.id) + '"' + idAttr + (pagada ? ' checked' : '') + '>' +
+      '<span>' + (pagada ? 'Pagada' : 'Pago pendiente') + '</span>' +
+    '</label>';
+  }
+
+  function renderHistorialItem(h){
+    var clienteHtml = h.cliente ? escapeHtml(h.cliente) : '<span class="anon">Sin nombre de cliente</span>';
+    var cantItems = h.lineas.reduce(function(acc, l){ return acc + l.cantidad; }, 0);
+    var pagada = !!h.pagada;
+    return '<div class="historial-item' + (pagada ? ' archivada' : '') + '">' +
+      htmlPagoBoleta(h) +
+      '<div class="num-badge">N°' + escapeHtml(h.numero || '—') + '</div>' +
+      '<div class="info">' +
+        '<div class="cliente">' + clienteHtml + '</div>' +
+        '<div class="meta">' +
+          '<span>📅 ' + formatearFechaLegible(h.fecha) + '</span>' +
+          '<span>🧺 ' + cantItems + (cantItems === 1 ? ' ítem' : ' ítems') + '</span>' +
+          '<span class="pago-badge ' + (pagada ? 'pagada' : 'pendiente') + '">' + (pagada ? 'Archivada' : 'Cobro pendiente') + '</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="monto mono">' + money(h.total) + '</div>' +
+      '<div class="acciones">' +
+        '<button type="button" class="btn-icon" title="Ver boleta" data-action="ver-historial" data-id="' + escapeHtml(h.id) + '">👁️</button>' +
+        '<button type="button" class="btn-icon" title="Compartir por WhatsApp" data-action="wpp-historial" data-id="' + escapeHtml(h.id) + '">💬</button>' +
+        '<button type="button" class="btn-icon danger" title="Eliminar" data-action="eliminar-historial" data-id="' + escapeHtml(h.id) + '">🗑️</button>' +
+      '</div>' +
+    '</div>';
   }
 
   function renderHistorial(){
     var wrap = document.getElementById('historial-lista-wrap');
     var query = (document.getElementById('buscador-historial').value || '').toLowerCase().trim();
-    document.getElementById('historial-count').textContent = '(' + historial.length + ')';
     actualizarStatHistorial();
 
     if (historial.length === 0){
@@ -1250,44 +1341,134 @@ return nuevo;
       return;
     }
 
-    var filtradas = historial.filter(function(h){
-      if (!query) return true;
-      var cliente = (h.cliente || '').toLowerCase();
-      var numero = (h.numero || '').toLowerCase();
-      return cliente.indexOf(query) !== -1 || numero.indexOf(query) !== -1;
-    });
+    var activas = historial.filter(function(h){ return !h.pagada && historialCoincideBusqueda(h, query); });
+    var archivadas = historial.filter(function(h){ return h.pagada && historialCoincideBusqueda(h, query); });
 
-    if (filtradas.length === 0){
+    if (activas.length === 0 && archivadas.length === 0){
       wrap.innerHTML = '<div class="empty-state">No hay boletas que coincidan con «' + escapeHtml(query) + '».</div>';
       return;
     }
 
-    wrap.innerHTML = '<div class="historial-lista">' + filtradas.map(function(h){
-      var clienteHtml = h.cliente ? escapeHtml(h.cliente) : '<span class="anon">Sin nombre de cliente</span>';
-      var cantItems = h.lineas.reduce(function(acc, l){ return acc + l.cantidad; }, 0);
-      return '<div class="historial-item">' +
-        '<div class="num-badge">N°' + escapeHtml(h.numero || '—') + '</div>' +
-        '<div class="info">' +
-          '<div class="cliente">' + clienteHtml + '</div>' +
-          '<div class="meta">' +
-            '<span>📅 ' + formatearFechaLegible(h.fecha) + '</span>' +
-            '<span>🧺 ' + cantItems + (cantItems === 1 ? ' ítem' : ' ítems') + '</span>' +
-          '</div>' +
-        '</div>' +
-        '<div class="monto mono">' + money(h.total) + '</div>' +
-        '<div class="acciones">' +
-          '<button type="button" class="btn-icon" title="Ver boleta" data-action="ver-historial" data-id="' + escapeHtml(h.id) + '">👁️</button>' +
-          '<button type="button" class="btn-icon" title="Compartir por WhatsApp" data-action="wpp-historial" data-id="' + escapeHtml(h.id) + '">💬</button>' +
-          '<button type="button" class="btn-icon danger" title="Eliminar" data-action="eliminar-historial" data-id="' + escapeHtml(h.id) + '">🗑️</button>' +
-        '</div>' +
-      '</div>';
-    }).join('') + '</div>';
+    var html = '';
+    if (activas.length > 0){
+      html += '<div class="historial-seccion-titulo">Pendientes de pago <span class="count">(' + activas.length + ')</span></div>';
+      html += '<div class="historial-lista">' + activas.map(renderHistorialItem).join('') + '</div>';
+    } else if (!query){
+      html += '<div class="empty-state historial-seccion-vacia">No hay boletas con cobro pendiente.</div>';
+    }
+
+    if (archivadas.length > 0){
+      html += '<div class="historial-seccion-titulo archivadas">Archivadas — pagadas <span class="count">(' + archivadas.length + ')</span></div>';
+      html += '<div class="historial-lista historial-lista-archivadas">' + archivadas.map(renderHistorialItem).join('') + '</div>';
+    }
+
+    wrap.innerHTML = html;
   }
   window.renderHistorial = renderHistorial;
+
+  /* ===================== recordatorio semanal de deudas ===================== */
+  var MS_SEMANA = 7 * 24 * 60 * 60 * 1000;
+  var boletasEnRecordatorioActual = [];
+
+  function fechaCreacionBoleta(h){
+    var raw = h.guardadoEn || h.fecha;
+    if (!raw) return null;
+    var d = new Date(raw);
+    if (String(h.fecha || '').length === 10 && !h.guardadoEn){
+      var p = h.fecha.split('-');
+      d = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
+    }
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  function semanasDesdeCreacionBoleta(h){
+    var creada = fechaCreacionBoleta(h);
+    if (!creada) return 0;
+    return Math.floor((Date.now() - creada.getTime()) / MS_SEMANA);
+  }
+
+  function boletaDebeRecordarDeuda(h){
+    if (h.pagada) return false;
+    var semanas = semanasDesdeCreacionBoleta(h);
+    if (semanas < 1) return false;
+    var ultimo = typeof h.recordatorioSemana === 'number' ? h.recordatorioSemana : 0;
+    return semanas > ultimo;
+  }
+
+  function agruparDeudasParaRecordatorio(){
+    var mapa = {};
+    historial.forEach(function(h){
+      if (!boletaDebeRecordarDeuda(h)) return;
+      var nombre = (h.cliente || '').trim() || 'Sin nombre de cliente';
+      var key = nombre.toLowerCase();
+      if (!mapa[key]){
+        mapa[key] = { nombre: nombre, boletas: [], total: 0 };
+      }
+      mapa[key].boletas.push(h);
+      mapa[key].total += isFinite(h.total) ? h.total : 0;
+    });
+    return Object.keys(mapa).map(function(k){ return mapa[k]; })
+      .sort(function(a, b){ return b.total - a.total; });
+  }
+
+  function marcarRecordatorioDeudasMostrado(){
+    boletasEnRecordatorioActual.forEach(function(h){
+      h.recordatorioSemana = semanasDesdeCreacionBoleta(h);
+    });
+    boletasEnRecordatorioActual = [];
+    persistirLocalStorage();
+  }
+
+  function cerrarRecordatorioDeudas(){
+    var overlay = document.getElementById('recordatorio-deudas-overlay');
+    if (overlay) overlay.classList.remove('show');
+    marcarRecordatorioDeudasMostrado();
+  }
+
+  function mostrarRecordatorioDeudasSiCorresponde(){
+    var grupos = agruparDeudasParaRecordatorio();
+    if (grupos.length === 0) return;
+
+    boletasEnRecordatorioActual = [];
+    grupos.forEach(function(g){
+      g.boletas.forEach(function(h){ boletasEnRecordatorioActual.push(h); });
+    });
+
+    var lista = document.getElementById('recordatorio-deudas-lista');
+    var overlay = document.getElementById('recordatorio-deudas-overlay');
+    if (!lista || !overlay) return;
+
+    lista.innerHTML = grupos.map(function(g){
+      var n = g.boletas.length;
+      var detalle = n === 1
+        ? ('Boleta N° ' + escapeHtml(g.boletas[0].numero || '—'))
+        : (n + ' boletas pendientes');
+      return '<li class="recordatorio-deuda-item">' +
+        '<div class="recordatorio-deuda-cliente">' + escapeHtml(g.nombre) + '</div>' +
+        '<div class="recordatorio-deuda-meta">' + detalle + '</div>' +
+        '<div class="recordatorio-deuda-total mono">' + money(g.total) + '</div>' +
+      '</li>';
+    }).join('');
+
+    overlay.classList.add('show');
+  }
 
   function buscarEnHistorial(id){
     return historial.find(function(h){ return h.id === id; });
   }
+
+  window.marcarPagoHistorial = function(id, pagada){
+    var h = buscarEnHistorial(id);
+    if (!h) return;
+    h.pagada = !!pagada;
+    h.archivada = h.pagada;
+    if (h.pagada) h.pagadaEn = new Date().toISOString();
+    else delete h.pagadaEn;
+    persistirLocalStorage();
+    renderHistorial();
+    if (historialDetalleAbiertoId === id) verDetalleHistorial(id);
+    mostrarAviso(h.pagada ? 'Boleta pagada y archivada ✅' : 'Pago pendiente · boleta activa');
+  };
 
   window.compartirDesdeHistorial = function(id){
     var h = buscarEnHistorial(id);
@@ -1327,6 +1508,7 @@ return nuevo;
           '<div class="row"><label>N°</label><span class="mono">' + escapeHtml(h.numero || '—') + '</span></div>' +
           '<div class="row"><label>Fecha</label><span class="mono">' + formatearFechaLegible(h.fecha) + '</span></div>' +
           '<div class="row"><label>Cliente</label><span class="mono">' + clienteHtml + '</span></div>' +
+          '<div class="row pago-detalle-row"><label>Pago</label>' + htmlPagoBoleta(h, 'historial-detalle-pagada') + '</div>' +
         '</div>' +
         '<div class="dashed"></div>' +
         '<div class="receipt-cols"><span>Producto</span><span>Cant.</span><span>P.Unit</span><span>Subt.</span></div>' +
@@ -1353,7 +1535,10 @@ return nuevo;
   window.reabrirBoletaDeHistorial = function(id){
     var h = buscarEnHistorial(id);
     if (!h) return;
-    if (!confirm('Esto va a reemplazar la boleta actual por la de "' + (h.cliente || ('N° ' + h.numero)) + '". ¿Continuar?')) return;
+    if (!resolverBoletaPendienteAntesDeReemplazar(
+      '¿Guardar la boleta actual en el historial antes de abrir otra?',
+      '¿Abrir la boleta del historial sin guardar la actual? Se perderá la boleta actual.'
+    )) return;
 
     cantidades = {};
     itemsManuales = [];
@@ -1498,6 +1683,22 @@ return nuevo;
     if (btnGuardarHistorial) btnGuardarHistorial.addEventListener('click', guardarEnHistorial);
     if (btnCerrarHistorial) btnCerrarHistorial.addEventListener('click', cerrarDetalleHistorial);
 
+    var btnRecordatorioOk = document.getElementById('btn-recordatorio-deudas-ok');
+    var btnRecordatorioHistorial = document.getElementById('btn-recordatorio-deudas-historial');
+    var overlayRecordatorio = document.getElementById('recordatorio-deudas-overlay');
+    if (btnRecordatorioOk) btnRecordatorioOk.addEventListener('click', cerrarRecordatorioDeudas);
+    if (btnRecordatorioHistorial){
+      btnRecordatorioHistorial.addEventListener('click', function(){
+        cerrarRecordatorioDeudas();
+        cambiarTab('historial');
+      });
+    }
+    if (overlayRecordatorio){
+      overlayRecordatorio.addEventListener('click', function(ev){
+        if (ev.target === overlayRecordatorio) cerrarRecordatorioDeudas();
+      });
+    }
+
     var btnVerBoleta = document.getElementById('btn-ver-boleta');
     if (btnVerBoleta){
       btnVerBoleta.addEventListener('click', function(){
@@ -1588,6 +1789,7 @@ return nuevo;
     document.body.addEventListener('click', function(ev){
       var btn = ev.target.closest('[data-action]');
       if (!btn) return;
+      if (btn.getAttribute('data-action') === 'toggle-pago-historial') return;
       var action = btn.getAttribute('data-action');
       var id = btn.getAttribute('data-id') || '';
       switch (action){
@@ -1606,6 +1808,12 @@ return nuevo;
         case 'wpp-historial': compartirDesdeHistorial(id); break;
         case 'eliminar-historial': eliminarDeHistorial(id); break;
       }
+    });
+
+    document.body.addEventListener('change', function(ev){
+      var el = ev.target;
+      if (!el || el.getAttribute('data-action') !== 'toggle-pago-historial') return;
+      marcarPagoHistorial(el.getAttribute('data-id') || '', el.checked);
     });
   }
 
@@ -1635,6 +1843,12 @@ return nuevo;
 
   document.addEventListener('DOMContentLoaded', async function(){
     bindEventosUI();
+
+    window.addEventListener('beforeunload', function(ev){
+      if (!hayBoletaPendiente()) return;
+      ev.preventDefault();
+      ev.returnValue = '';
+    });
 
     if (!configDisponible()){
       mostrarErrorConfigFaltante();
@@ -1679,5 +1893,6 @@ return nuevo;
     renderResumenBoleta();
     actualizarStatHistorial();
     renderClientes();
+    mostrarRecordatorioDeudasSiCorresponde();
   });
 })();

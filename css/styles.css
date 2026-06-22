@@ -288,6 +288,63 @@
   }
   .historial-item .acciones{ flex:0 0 auto; display:flex; gap:6px; }
 
+  .historial-seccion-titulo{
+    margin:18px 0 10px; font-family:var(--font-display); font-size:14px; font-weight:700; color:var(--ink);
+  }
+  .historial-seccion-titulo:first-child{ margin-top:0; }
+  .historial-seccion-titulo.archivadas{ color:var(--muted); }
+  .historial-seccion-vacia{ padding:18px 10px; }
+
+  .pago-check{
+    display:inline-flex; align-items:center; gap:8px; cursor:pointer; user-select:none;
+    font-size:12.5px; font-weight:600; color:var(--ink); white-space:nowrap;
+  }
+  .pago-check input{
+    width:16px; height:16px; margin:0; accent-color:var(--success);
+  }
+  .historial-item .pago-check{ flex:0 0 auto; min-width:118px; }
+  .pago-check-boleta{
+    width:100%; justify-content:flex-start; padding:10px 12px; border:1px dashed var(--line);
+    border-radius:var(--radius); background:var(--paper); margin-bottom:4px;
+  }
+  .pago-badge{
+    display:inline-flex; align-items:center; padding:2px 8px; border-radius:999px;
+    font-size:11px; font-weight:700;
+  }
+  .pago-badge.pendiente{ background:#fff4e5; color:#9a5b00; }
+  .pago-badge.pagada{ background:#e8f7ee; color:#1f7a3f; }
+  .historial-item.archivada{ opacity:.82; background:#fafafa; }
+  .historial-item.archivada:hover{ opacity:1; }
+  .pago-detalle-row .pago-check{ font-size:13px; }
+
+  .recordatorio-deudas-overlay{
+    display:none; position:fixed; inset:0; z-index:1200; background:rgba(20,30,40,.45);
+    align-items:center; justify-content:center; padding:20px;
+  }
+  .recordatorio-deudas-overlay.show{ display:flex; }
+  .recordatorio-deudas-card{
+    width:min(440px, 100%); max-height:min(80vh, 520px); overflow:auto;
+    background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow-lift);
+    border:1px solid var(--line); padding:20px 18px 16px;
+  }
+  .recordatorio-deudas-card h3{
+    margin:0 0 8px; font-family:var(--font-display); font-size:20px; color:var(--ink);
+  }
+  .recordatorio-deudas-intro{ margin:0 0 14px; font-size:13.5px; color:var(--muted); line-height:1.45; }
+  .recordatorio-deudas-lista{
+    list-style:none; margin:0 0 16px; padding:0; display:flex; flex-direction:column; gap:8px;
+  }
+  .recordatorio-deuda-item{
+    display:grid; grid-template-columns:1fr auto; gap:4px 12px; align-items:center;
+    padding:10px 12px; border:1px solid var(--line); border-radius:var(--radius); background:var(--paper);
+  }
+  .recordatorio-deuda-cliente{ font-weight:700; color:var(--ink); font-size:14px; }
+  .recordatorio-deuda-meta{ grid-column:1; font-size:12px; color:var(--muted); }
+  .recordatorio-deuda-total{ grid-row:1 / span 2; font-size:15px; font-weight:700; color:var(--accent-dark); }
+
+  .recordatorio-deudas-acciones{ display:flex; gap:8px; flex-wrap:wrap; }
+  .recordatorio-deudas-acciones .btn{ flex:1; min-width:120px; }
+
   .btn-whatsapp{
     background:var(--whatsapp); color:#fff; display:inline-flex; align-items:center;
     gap:7px; justify-content:center; box-shadow:0 2px 0 var(--whatsapp-dark);

@@ -1,4 +1,4 @@
-var CACHE = 'soderia-lardelli-v7';
+var CACHE = 'soderia-lardelli-v8';
 var PRECACHE = [
   './css/styles.css',
   './js/app.js',
