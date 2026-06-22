@@ -1423,6 +1423,7 @@ return nuevo;
     var overlay = document.getElementById('recordatorio-deudas-overlay');
     if (overlay) overlay.classList.remove('show');
     marcarRecordatorioDeudasMostrado();
+    verificarLimpiezaArchivoHistorial();
   }
 
   function mostrarRecordatorioDeudasSiCorresponde(){
@@ -1451,6 +1452,114 @@ return nuevo;
     }).join('');
 
     overlay.classList.add('show');
+  }
+
+  /* ===================== limpieza de archivadas antiguas ===================== */
+  var LIMPIEZA_ARCHIVO_CANTIDAD = 50;
+  var LIMPIEZA_ARCHIVO_DIAS = 30;
+  var loteLimpiezaArchivoPendiente = [];
+
+  function limpiezaArchivoPostergada(){
+    try{
+      var snooze = parseInt(localStorage.getItem('soderia_limpieza_snooze') || '0', 10);
+      return snooze && (Date.now() - snooze) < MS_SEMANA;
+    }catch(e){ return false; }
+  }
+
+  function postergarLimpiezaArchivo(){
+    try{ localStorage.setItem('soderia_limpieza_snooze', String(Date.now())); }catch(e){}
+  }
+
+  function fechaReferenciaArchivo(h){
+    return h.pagadaEn || h.guardadoEn || h.fecha;
+  }
+
+  function diasDesdeFecha(valor){
+    if (!valor) return 0;
+    var d = new Date(valor);
+    if (isNaN(d.getTime())) return 0;
+    return Math.floor((Date.now() - d.getTime()) / (24 * 60 * 60 * 1000));
+  }
+
+  function boletasArchivadasAntiguasElegibles(){
+    return historial.filter(function(h){
+      if (!h.pagada) return false;
+      return diasDesdeFecha(fechaReferenciaArchivo(h)) >= LIMPIEZA_ARCHIVO_DIAS;
+    }).sort(function(a, b){
+      return new Date(fechaReferenciaArchivo(a)).getTime() - new Date(fechaReferenciaArchivo(b)).getTime();
+    });
+  }
+
+  function textoLimpiezaArchivoParaWhatsapp(boletas){
+    var negocio = (document.getElementById('b-negocio') && document.getElementById('b-negocio').value) || 'Soderia Lardelli';
+    var L = [];
+    L.push('*Respaldo ' + negocio + '*');
+    L.push(boletas.length + ' boletas archivadas (ya pagadas)');
+    L.push('Exportado: ' + new Date().toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' }));
+    L.push('');
+    var total = 0;
+    boletas.forEach(function(h){
+      total += isFinite(h.total) ? h.total : 0;
+      var cliente = h.cliente || 'Sin cliente';
+      L.push('• N°' + (h.numero || '—') + ' · ' + formatearFechaLegible(h.fecha) + ' · ' + cliente + ' · ' + money(h.total));
+    });
+    L.push('');
+    L.push('*Total respaldado: ' + money(total) + '*');
+    return L.join('\n');
+  }
+
+  function cerrarLimpiezaArchivo(){
+    var overlay = document.getElementById('limpieza-archivo-overlay');
+    if (overlay) overlay.classList.remove('show');
+    loteLimpiezaArchivoPendiente = [];
+  }
+
+  function ejecutarLimpiezaArchivo(){
+    if (!loteLimpiezaArchivoPendiente.length) return;
+    if (!confirm('Se van a borrar ' + loteLimpiezaArchivoPendiente.length + ' boletas del historial después de abrir WhatsApp. ¿Continuar?')) return;
+
+    var lote = loteLimpiezaArchivoPendiente.slice();
+    var ids = {};
+    lote.forEach(function(h){ ids[h.id] = true; });
+
+    abrirWhatsappConTexto(textoLimpiezaArchivoParaWhatsapp(lote));
+    historial = historial.filter(function(h){ return !ids[h.id]; });
+    persistirLocalStorage();
+    renderHistorial();
+    cerrarLimpiezaArchivo();
+    try{ localStorage.removeItem('soderia_limpieza_snooze'); }catch(e){}
+    mostrarAviso(lote.length + ' boletas respaldadas y eliminadas del historial ✅');
+  }
+
+  function verificarLimpiezaArchivoHistorial(){
+    if (limpiezaArchivoPostergada()) return;
+
+    var elegibles = boletasArchivadasAntiguasElegibles();
+    if (elegibles.length < LIMPIEZA_ARCHIVO_CANTIDAD) return;
+
+    loteLimpiezaArchivoPendiente = elegibles.slice(0, LIMPIEZA_ARCHIVO_CANTIDAD);
+
+    var intro = document.getElementById('limpieza-archivo-intro');
+    var overlay = document.getElementById('limpieza-archivo-overlay');
+    if (!intro || !overlay) return;
+
+    var restantes = elegibles.length - loteLimpiezaArchivoPendiente.length;
+    intro.textContent = 'Tenés ' + elegibles.length + ' boletas archivadas con más de ' + LIMPIEZA_ARCHIVO_DIAS + ' días. ' +
+      'Para que la app vaya más liviana, podés exportar las ' + loteLimpiezaArchivoPendiente.length + ' más antiguas por WhatsApp y borrarlas del historial (ya están pagas).' +
+      (restantes > 0 ? ' Quedarían ' + restantes + ' para una próxima limpieza.' : '');
+
+    overlay.classList.add('show');
+  }
+
+  function mostrarAvisosInicio(){
+    var overlayDeudas = document.getElementById('recordatorio-deudas-overlay');
+    var habiaDeudas = false;
+    if (overlayDeudas){
+      var grupos = agruparDeudasParaRecordatorio();
+      habiaDeudas = grupos.length > 0;
+    }
+    mostrarRecordatorioDeudasSiCorresponde();
+    if (!habiaDeudas) verificarLimpiezaArchivoHistorial();
   }
 
   function buscarEnHistorial(id){
@@ -1699,6 +1808,26 @@ return nuevo;
       });
     }
 
+    var btnLimpiezaWpp = document.getElementById('btn-limpieza-archivo-wpp');
+    var btnLimpiezaPostergar = document.getElementById('btn-limpieza-archivo-postergar');
+    var overlayLimpieza = document.getElementById('limpieza-archivo-overlay');
+    if (btnLimpiezaWpp) btnLimpiezaWpp.addEventListener('click', ejecutarLimpiezaArchivo);
+    if (btnLimpiezaPostergar){
+      btnLimpiezaPostergar.addEventListener('click', function(){
+        postergarLimpiezaArchivo();
+        cerrarLimpiezaArchivo();
+        mostrarAviso('Limpieza pospuesta una semana');
+      });
+    }
+    if (overlayLimpieza){
+      overlayLimpieza.addEventListener('click', function(ev){
+        if (ev.target === overlayLimpieza){
+          postergarLimpiezaArchivo();
+          cerrarLimpiezaArchivo();
+        }
+      });
+    }
+
     var btnVerBoleta = document.getElementById('btn-ver-boleta');
     if (btnVerBoleta){
       btnVerBoleta.addEventListener('click', function(){
@@ -1893,6 +2022,6 @@ return nuevo;
     renderResumenBoleta();
     actualizarStatHistorial();
     renderClientes();
-    mostrarRecordatorioDeudasSiCorresponde();
+    mostrarAvisosInicio();
   });
 })();
