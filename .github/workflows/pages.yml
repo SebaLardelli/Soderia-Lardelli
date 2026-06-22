@@ -56,7 +56,8 @@ jobs:
         run: |
           grep -q "window.SODERIA_CONFIG" index.html
           grep -q "SUPABASE_URL" index.html
-          grep -q "FAMILY_PIN" index.html
+          test -f config.js
+          grep -q "SUPABASE_URL" config.js
           echo "Config embebida OK"
 
       - name: Subir artefacto Pages

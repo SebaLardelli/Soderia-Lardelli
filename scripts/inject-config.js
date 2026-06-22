@@ -11,6 +11,9 @@ if (!cfg.SUPABASE_URL || !cfg.SUPABASE_ANON_KEY || !cfg.FAMILY_PIN) {
   process.exit(1);
 }
 
+const jsContent = 'window.SODERIA_CONFIG = ' + JSON.stringify(cfg, null, 2) + ';\n';
+fs.writeFileSync('config.js', jsContent);
+
 const inline = '<script>window.SODERIA_CONFIG = ' + JSON.stringify(cfg) + ';</script>';
 let html = fs.readFileSync('index.html', 'utf8');
 const marker = /<!-- SODERIA_CONFIG:.*?-->\s*<script src="config\.js"><\/script>/s;
@@ -20,6 +23,9 @@ if (!marker.test(html)) {
   process.exit(1);
 }
 
-html = html.replace(marker, '<!-- SODERIA_CONFIG (inyectado en deploy, no va al repo) -->\n' + inline);
+html = html.replace(
+  marker,
+  '<!-- SODERIA_CONFIG (generado en deploy) -->\n' + inline + '\n<script src="config.js"></script>'
+);
 fs.writeFileSync('index.html', html);
-console.log('Config inyectada en index.html para deploy');
+console.log('config.js e index.html listos para deploy');
