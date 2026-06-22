@@ -173,7 +173,8 @@
   }
 
   function configDisponible(){
-    return typeof window.SODERIA_CONFIG === 'object' && window.SODERIA_CONFIG !== null;
+    var c = window.SODERIA_CONFIG;
+    return !!(c && (c.SUPABASE_URL || c.FAMILY_PIN));
   }
 
   function mostrarErrorConfigFaltante(){

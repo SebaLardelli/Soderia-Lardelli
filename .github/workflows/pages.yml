@@ -45,21 +45,18 @@ jobs:
           fi
           echo "Secrets OK"
 
-      - name: Crear config.js desde secrets
+      - name: Crear config.js e inyectar en index.html
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           FAMILY_PIN: ${{ secrets.FAMILY_PIN }}
+        run: node scripts/inject-config.js
+
+      - name: Verificar que la config quedó embebida
         run: |
-          node -e "
-          const fs = require('fs');
-          const cfg = {
-            SUPABASE_URL: process.env.SUPABASE_URL,
-            SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
-            FAMILY_PIN: process.env.FAMILY_PIN
-          };
-          fs.writeFileSync('config.js', 'window.SODERIA_CONFIG = ' + JSON.stringify(cfg, null, 2) + ';\n');
-          "
+          grep -q "window.SODERIA_CONFIG" index.html
+          grep -q "SUPABASE_URL" index.html
+          echo "Config embebida OK"
 
       - name: Subir artefacto Pages
         uses: actions/upload-pages-artifact@v3
