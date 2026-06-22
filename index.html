@@ -1,0 +1,268 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Soderia Lardelli</title>
+  <meta name="description" content="Productos, boletas e historial — Soderia Lardelli">
+  <meta name="theme-color" content="#1a3654">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Soderia Lardelli">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-512.png">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="app">
+
+  <header class="app-header">
+    <div class="brand">
+      <img class="brand-logo" src="icons/logo.png" alt="Soderia Lardelli" width="240" height="120">
+      <p class="tagline">Agua y Soda tratada</p>
+    </div>
+    <div class="stat">
+      <div>Productos cargados: <b id="stat-productos">0</b></div>
+      <div>Boletas en historial: <b id="stat-historial">0</b></div>
+      <div>Último guardado: <b id="stat-guardado">—</b></div>
+      <div>Nube: <b id="stat-nube" class="sync-off">local</b></div>
+      <button type="button" class="btn btn-install-app" id="btn-install-app" hidden>📲 Instalar aplicación</button>
+      <p class="pwa-hint" id="pwa-hint"></p>
+    </div>
+  </header>
+<nav class="tabs" role="tablist">
+    <button class="tab-btn" id="tab-btn-productos" role="tab" aria-selected="true">📦 Productos</button>
+    <button class="tab-btn" id="tab-btn-boleta" role="tab" aria-selected="false">🧾 Boleta</button>
+    <button class="tab-btn" id="tab-btn-historial" role="tab" aria-selected="false">🗂️ Historial</button>
+  </nav>
+
+  <main>
+    <!-- ===================== PANEL PRODUCTOS ===================== -->
+    <section id="panel-productos" class="panel active">
+      <div class="productos-grid">
+
+        <div class="col-izq">
+        <div class="card">
+          <h2 id="form-titulo">Agregar producto</h2>
+          <div id="editing-banner" class="editing-banner" style="display:none;">
+            <span>✏️ Editando producto</span>
+            <button type="button" id="btn-cancelar-producto">Cancelar</button>
+          </div>
+          <form id="form-producto">
+            <div class="field">
+              <label for="p-nombre">Nombre del producto</label>
+              <input id="p-nombre" type="text" placeholder="Ej: Coca Cola 1.5L" required="">
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="p-precio">Precio</label>
+                <input id="p-precio" type="number" min="0" step="0.01" placeholder="0.00" required="">
+              </div>
+              <div class="field">
+                <label for="p-codigo">Código (opcional)</label>
+                <input id="p-codigo" type="text" placeholder="SKU / código">
+              </div>
+            </div>
+            <div class="field">
+              <label for="p-categoria">Categoría</label>
+              <select id="p-categoria"><option value="">Sin categoría</option></select>
+            </div>
+            <div class="error-msg" id="p-error"></div>
+            <button type="submit" class="btn btn-primary btn-block" id="p-submit-btn">Agregar producto</button>
+          </form>
+        </div>
+
+        <div class="card" id="card-categorias">
+          <h2>Categorías <span class="count" id="categorias-count">(0)</span></h2>
+          <div id="cat-editing-banner" class="editing-banner" style="display:none;">
+            <span>✏️ Editando categoría</span>
+            <button type="button" id="btn-cancelar-categoria">Cancelar</button>
+          </div>
+          <form id="form-categoria">
+            <div class="field-row">
+              <div class="field" style="flex:1;">
+                <label for="c-nombre">Nombre de la categoría</label>
+                <input id="c-nombre" type="text" placeholder="Ej: Vinos, Sodas, Aguas">
+              </div>
+            </div>
+            <div class="error-msg" id="c-error"></div>
+            <button type="submit" class="btn btn-ghost btn-block" id="c-submit-btn">＋ Agregar categoría</button>
+          </form>
+          <div id="lista-categorias-wrap" style="margin-top:12px;"></div>
+        </div>
+
+        <div class="card" id="card-clientes">
+          <h2>Clientes <span class="count" id="clientes-count">(0)</span></h2>
+          <div id="cli-editing-banner" class="editing-banner" style="display:none;">
+            <span>✏️ Editando cliente</span>
+            <button type="button" id="btn-cancelar-cliente">Cancelar</button>
+          </div>
+          <form id="form-cliente">
+            <div class="field-row">
+              <div class="field" style="flex:1;">
+                <label for="cl-nombre">Nombre del cliente</label>
+                <input id="cl-nombre" type="text" placeholder="Ej: Juan Pérez">
+              </div>
+            </div>
+            <div class="error-msg" id="cl-error"></div>
+            <button type="submit" class="btn btn-ghost btn-block" id="cl-submit-btn">＋ Agregar cliente</button>
+          </form>
+          <div id="lista-clientes-wrap" style="margin-top:12px;"></div>
+        </div>
+        </div>
+
+        <div class="card card-catalogo">
+          <div class="card-head-row">
+            <h2>Catálogo <span class="count" id="catalogo-count">(0)</span></h2>
+            <div class="search-row compact">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"></circle><path d="M20 20L16.5 16.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
+              <input type="text" id="buscador-catalogo" placeholder="Buscar por nombre o código…">
+            </div>
+          </div>
+          <div class="lista-meta" id="catalogo-meta"></div>
+          <div id="tabla-productos-wrap" class="scroll-panel catalogo-scroll"></div>
+        </div>
+
+      </div>
+
+            <div class="save-bar">
+        <div class="txt">Los datos se sincronizan en la nube para toda la familia.</div>
+        <div class="save-bar-actions">
+          <button type="button" class="btn btn-ghost" id="btn-imprimir-lista">Imprimir lista de precios</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== PANEL BOLETA ===================== -->
+    <section id="panel-boleta" class="panel">
+      <div class="boleta-grid">
+
+        <div class="card card-boleta-productos">
+          <h2>Elegí productos</h2>
+          <div class="cat-filtros" id="cat-filtros-wrap"></div>
+          <div class="search-row">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"></circle><path d="M20 20L16.5 16.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
+            <input type="text" id="buscador" placeholder="Buscar por nombre o código…">
+          </div>
+          <div class="lista-meta" id="boleta-lista-meta">
+            <span>Mostrando <b id="boleta-filtrados">0</b></span>
+            <span>En boleta: <b id="boleta-seleccionados">0</b></span>
+          </div>
+          <div id="lista-boleta-wrap" class="scroll-panel boleta-scroll"></div>
+        </div>
+
+        <div class="receipt-wrap">
+          <div class="card" id="boleta-imprimible">
+            <div class="receipt-card">
+              <input type="text" id="b-negocio" class="receipt-biz" placeholder="Nombre de tu negocio">
+
+              <div class="receipt-meta">
+                <div class="row"><label for="b-numero">N°</label><input id="b-numero" type="text" class="mono" readonly tabindex="-1" aria-readonly="true" title="Se asigna automáticamente"></div>
+                <div class="row"><label for="b-fecha">Fecha</label><input id="b-fecha" type="date"></div>
+                <div class="row"><label for="b-cliente">Cliente<span class="req" aria-hidden="true">*</span></label><input id="b-cliente" type="text" list="clientes-datalist" placeholder="Elegí o escribí un cliente" required><datalist id="clientes-datalist"></datalist></div>
+                <div class="field-hint" id="b-cliente-error"></div>
+              </div>
+
+              <div class="dashed"></div>
+
+              <div class="receipt-cols">
+                <span>Producto</span><span>Cant.</span><span>P.Unit</span><span>Subt.</span>
+              </div>
+              <div class="receipt-items" id="receipt-items"></div>
+
+              <div class="dashed"></div>
+
+              <div class="receipt-totales">
+                <div class="row"><span>Subtotal</span><span class="v mono" id="r-subtotal">$ 0,00</span></div>
+                <div class="row">
+                  <span>Descuento</span>
+                  <span class="desc-control">
+                    <input type="number" id="b-descuento" min="0" step="0.01" value="0">
+                    <select id="b-descuento-tipo">
+                      <option value="monto">$</option>
+                      <option value="porcentaje">%</option>
+                    </select>
+                  </span>
+                </div>
+                <div class="row total"><span>Total</span><span class="v mono" id="r-total">$ 0,00</span></div>
+              </div>
+
+              <div class="receipt-footer-note">Gracias por su compra.</div>
+            </div>
+          </div>
+
+          <div class="receipt-actions">
+            <button type="button" class="btn btn-whatsapp" id="btn-whatsapp-boleta">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.87.5 3.62 1.43 5.13L2 22l5.13-1.53a9.86 9.86 0 0 0 4.91 1.31h.01c5.46 0 9.91-4.45 9.91-9.91S17.5 2 12.04 2zm0 18.13a8.2 8.2 0 0 1-4.18-1.15l-.3-.18-3.04.91.91-2.96-.2-.31a8.18 8.18 0 0 1-1.27-4.37c0-4.53 3.69-8.22 8.22-8.22 4.53 0 8.22 3.69 8.22 8.22 0 4.53-3.69 8.22-8.22 8.22zm4.5-6.15c-.25-.12-1.46-.72-1.69-.8-.23-.08-.39-.12-.56.12-.16.25-.64.8-.78.96-.15.16-.29.18-.54.06-.25-.12-1.05-.39-2-1.23-.74-.66-1.24-1.48-1.39-1.73-.14-.25-.02-.39.11-.52.12-.12.27-.31.41-.47.14-.16.18-.27.27-.45.09-.18.04-.33-.04-.45-.08-.12-.5-1.2-.69-1.65-.18-.43-.37-.37-.51-.38h-.43c-.14 0-.37.05-.57.27-.2.22-.76.74-.76 1.8s.78 2.09.89 2.23c.11.14 1.51 2.3 3.66 3.13 1.82.7 2.19.56 2.59.52.4-.04 1.29-.53 1.47-1.04.18-.51.18-.95.13-1.04-.05-.09-.2-.14-.45-.26z"></path></svg>
+              Compartir por WhatsApp
+            </button>
+            <button type="button" class="btn btn-ghost" id="btn-nueva-boleta">🧹 Nueva boleta</button>
+            <button type="button" class="btn btn-success" id="btn-guardar-historial">📥 Guardar en historial</button>
+            <button type="button" class="btn btn-ghost" id="btn-imprimir-boleta">🖨️ Imprimir (2 copias)</button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ===================== PANEL HISTORIAL ===================== -->
+    <section id="panel-historial" class="panel">
+      <div class="card">
+        <div class="historial-toolbar">
+          <h2 style="margin:0;">Boletas guardadas <span class="count" id="historial-count">(0)</span></h2>
+          <div class="search-row" style="max-width:280px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"></circle><path d="M20 20L16.5 16.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
+            <input type="text" id="buscador-historial" placeholder="Buscar por cliente o N°…">
+          </div>
+        </div>
+        <div id="historial-lista-wrap"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===================== MODAL DETALLE DE BOLETA GUARDADA ===================== -->
+  <div class="historial-detalle-overlay" id="historial-overlay">
+    <div class="historial-detalle-card">
+      <div class="historial-detalle-close"><button type="button" id="btn-cerrar-historial" aria-label="Cerrar">✕</button></div>
+      <div class="historial-detalle-body" id="historial-detalle-body"><!-- ticket render --></div>
+      <div class="historial-detalle-acciones">
+        <button class="btn btn-whatsapp" id="historial-detalle-wpp-btn" style="flex:1 1 100%;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.87.5 3.62 1.43 5.13L2 22l5.13-1.53a9.86 9.86 0 0 0 4.91 1.31h.01c5.46 0 9.91-4.45 9.91-9.91S17.5 2 12.04 2zm0 18.13a8.2 8.2 0 0 1-4.18-1.15l-.3-.18-3.04.91.91-2.96-.2-.31a8.18 8.18 0 0 1-1.27-4.37c0-4.53 3.69-8.22 8.22-8.22 4.53 0 8.22 3.69 8.22 8.22 0 4.53-3.69 8.22-8.22 8.22zm4.5-6.15c-.25-.12-1.46-.72-1.69-.8-.23-.08-.39-.12-.56.12-.16.25-.64.8-.78.96-.15.16-.29.18-.54.06-.25-.12-1.05-.39-2-1.23-.74-.66-1.24-1.48-1.39-1.73-.14-.25-.02-.39.11-.52.12-.12.27-.31.41-.47.14-.16.18-.27.27-.45.09-.18.04-.33-.04-.45-.08-.12-.5-1.2-.69-1.65-.18-.43-.37-.37-.51-.38h-.43c-.14 0-.37.05-.57.27-.2.22-.76.74-.76 1.8s.78 2.09.89 2.23c.11.14 1.51 2.3 3.66 3.13 1.82.7 2.19.56 2.59.52.4-.04 1.29-.53 1.47-1.04.18-.51.18-.95.13-1.04-.05-.09-.2-.14-.45-.26z"></path></svg>
+          Compartir por WhatsApp
+        </button>
+        <button class="btn btn-ghost" id="historial-detalle-reabrir-btn">↩️ Reabrir como boleta actual</button>
+        <button class="btn btn-icon danger" id="historial-detalle-eliminar-btn" title="Eliminar del historial" style="width:auto; padding:10px 14px;">🗑️</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="app-footer">Productos, clientes e historial sincronizados en la nube para toda la familia.</footer>
+</div>
+
+<div class="pin-gate" id="pin-gate" aria-hidden="true">
+  <div class="pin-card">
+    <h3>Acceso familiar</h3>
+    <p>Ingresá la clave que comparte la familia para usar la app.</p>
+    <input type="password" id="pin-input" placeholder="Clave familiar" autocomplete="off">
+    <button type="button" class="btn btn-primary" id="pin-btn">Entrar</button>
+  </div>
+</div>
+
+<div class="mobile-total-bar" id="mobile-bar">
+  <div>
+    <div class="lbl">Total boleta</div>
+    <div class="amt" id="mobile-total">$ 0,00</div>
+  </div>
+  <button type="button" id="btn-ver-boleta">Ver boleta 🧾</button>
+</div>
+
+<div class="aviso" id="aviso">Boleta eliminada del historial</div>
+<div id="print-doble"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
