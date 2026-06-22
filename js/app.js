@@ -45,6 +45,13 @@
     return String(maxNumeroProductoExistente() + 1);
   }
 
+  function actualizarCampoCodigoProducto(){
+    var el = document.getElementById('p-codigo');
+    if (!el || editandoId) return;
+    el.readOnly = true;
+    el.value = nuevoIdProducto();
+  }
+
   function actualizarNumeroBoleta(){
     var el = document.getElementById('b-numero');
     if (el) el.value = String(contadorBoleta).padStart(4, '0');
@@ -704,7 +711,6 @@ return nuevo;
     ev.preventDefault();
     var nombre = document.getElementById('p-nombre').value.trim();
     var precio = parseFloat(document.getElementById('p-precio').value);
-    var codigo = document.getElementById('p-codigo').value.trim();
     var categoriaId = document.getElementById('p-categoria').value;
     var errorEl = document.getElementById('p-error');
     errorEl.textContent = '';
@@ -715,18 +721,19 @@ return nuevo;
     if (editandoId){
       var existente = productos.find(function(p){ return p.id === editandoId; });
       if (existente){
+        var codigo = document.getElementById('p-codigo').value.trim();
         existente.nombre = nombre; existente.precio = precio; existente.codigo = codigo; existente.categoriaId = categoriaId;
       }
       cancelarEdicion();
       mostrarAviso('Producto actualizado ✅');
     } else {
       var nuevoId = nuevoIdProducto();
-      if (!codigo) codigo = nuevoId;
-      productos.push({ id: nuevoId, nombre: nombre, precio: precio, codigo: codigo, categoriaId: categoriaId });
+      productos.push({ id: nuevoId, nombre: nombre, precio: precio, codigo: nuevoId, categoriaId: categoriaId });
       mostrarAviso('Producto agregado ✅ · N° ' + nuevoId);
     }
 
     document.getElementById('form-producto').reset();
+    actualizarCampoCodigoProducto();
     persistirLocalStorage();
     renderProductos();
     renderCategorias();
@@ -741,6 +748,7 @@ return nuevo;
     editandoId = id;
     document.getElementById('p-nombre').value = p.nombre;
     document.getElementById('p-precio').value = p.precio;
+    document.getElementById('p-codigo').readOnly = false;
     document.getElementById('p-codigo').value = p.codigo || '';
     document.getElementById('p-categoria').value = p.categoriaId || '';
     document.getElementById('form-titulo').textContent = 'Editar producto';
@@ -756,6 +764,7 @@ return nuevo;
     document.getElementById('p-submit-btn').textContent = 'Agregar producto';
     document.getElementById('editing-banner').style.display = 'none';
     document.getElementById('p-error').textContent = '';
+    actualizarCampoCodigoProducto();
   };
 
   window.eliminarProducto = function(id){
@@ -765,6 +774,7 @@ return nuevo;
     productos = productos.filter(function(x){ return x.id !== id; });
     delete cantidades[id];
     if (editandoId === id) cancelarEdicion();
+    else actualizarCampoCodigoProducto();
     persistirLocalStorage();
     renderProductos();
     renderCategorias();
