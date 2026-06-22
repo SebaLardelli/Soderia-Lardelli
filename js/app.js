@@ -172,6 +172,26 @@
     return window.SODERIA_CONFIG || {};
   }
 
+  function configDisponible(){
+    return typeof window.SODERIA_CONFIG === 'object' && window.SODERIA_CONFIG !== null;
+  }
+
+  function mostrarErrorConfigFaltante(){
+    var gate = document.getElementById('pin-gate');
+    var input = document.getElementById('pin-input');
+    var btn = document.getElementById('pin-btn');
+    var hint = gate ? gate.querySelector('.pin-card p') : null;
+    if (hint){
+      hint.textContent = 'No se cargó config.js. Si usás GitHub Pages, configurá los Secrets SUPABASE_URL, SUPABASE_ANON_KEY y FAMILY_PIN en el repo y volvé a publicar.';
+    }
+    if (input) input.style.display = 'none';
+    if (btn) btn.style.display = 'none';
+    if (gate){
+      gate.classList.add('show');
+      gate.setAttribute('aria-hidden', 'false');
+    }
+  }
+
   function supabaseConfigurado(){
     var c = getConfig();
     return !!(c.SUPABASE_URL && c.SUPABASE_ANON_KEY &&
@@ -1506,6 +1526,10 @@ return nuevo;
     if (pinBtn && pinInput){
       function intentarPin(){
         var pinCfg = (getConfig().FAMILY_PIN || '').trim();
+        if (!pinCfg){
+          mostrarAviso('No hay clave configurada. Revisá config.js o los Secrets de GitHub.');
+          return;
+        }
         if (pinInput.value.trim() === pinCfg){
           sessionStorage.setItem('soderia_pin_ok', '1');
           var gate = document.getElementById('pin-gate');
@@ -1578,6 +1602,11 @@ return nuevo;
 
   document.addEventListener('DOMContentLoaded', async function(){
     bindEventosUI();
+
+    if (!configDisponible()){
+      mostrarErrorConfigFaltante();
+      return;
+    }
 
     var btnInstall = document.getElementById('btn-install-app');
     if (btnInstall){

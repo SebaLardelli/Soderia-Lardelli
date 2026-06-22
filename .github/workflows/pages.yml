@@ -15,34 +15,64 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Crear config.js desde secrets
+      - name: Verificar secrets obligatorios
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          FAMILY_PIN: ${{ secrets.FAMILY_PIN }}
         run: |
-          cat > config.js << EOF
-          window.SODERIA_CONFIG = {
-            SUPABASE_URL: '${{ secrets.SUPABASE_URL }}',
-            SUPABASE_ANON_KEY: '${{ secrets.SUPABASE_ANON_KEY }}',
-            FAMILY_PIN: '${{ secrets.FAMILY_PIN }}'
+          if [ -z "$SUPABASE_URL" ]; then
+            echo "::error::Falta el secret SUPABASE_URL en GitHub → Settings → Secrets and variables → Actions"
+            exit 1
+          fi
+          if [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "::error::Falta el secret SUPABASE_ANON_KEY en GitHub → Settings → Secrets and variables → Actions"
+            exit 1
+          fi
+          if [ -z "$FAMILY_PIN" ]; then
+            echo "::error::Falta el secret FAMILY_PIN en GitHub → Settings → Secrets and variables → Actions"
+            exit 1
+          fi
+          echo "Secrets OK"
+
+      - name: Crear config.js desde secrets
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          FAMILY_PIN: ${{ secrets.FAMILY_PIN }}
+        run: |
+          node -e "
+          const fs = require('fs');
+          const cfg = {
+            SUPABASE_URL: process.env.SUPABASE_URL,
+            SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
+            FAMILY_PIN: process.env.FAMILY_PIN
           };
-          EOF
+          fs.writeFileSync('config.js', 'window.SODERIA_CONFIG = ' + JSON.stringify(cfg, null, 2) + ';\n');
+          "
 
       - name: Subir artefacto Pages
         uses: actions/upload-pages-artifact@v3
         with:
           path: .
 
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Publicar Pages
         id: deployment
         uses: actions/deploy-pages@v4
