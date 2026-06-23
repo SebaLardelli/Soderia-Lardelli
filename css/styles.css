@@ -334,6 +334,18 @@
     font-size:11.5px; color:var(--muted); line-height:1.35;
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
+  .cliente-notas-lista{ display:flex; flex-direction:column; gap:6px; margin-top:2px; }
+  .cliente-nota-chip{
+    display:flex; align-items:flex-start; gap:8px; padding:6px 8px;
+    border:1px solid #e8dcc8; border-radius:8px; background:#fffdf8; font-size:12px; line-height:1.35;
+  }
+  .cliente-nota-texto{ flex:1; color:var(--ink-soft); }
+  .cliente-nota-borrar{
+    flex:0 0 auto; width:22px; height:22px; border:none; border-radius:999px;
+    background:#f3ece2; color:var(--muted); cursor:pointer; font-size:12px; line-height:1;
+  }
+  .cliente-nota-borrar:hover{ background:#fde8e8; color:var(--danger); }
+  .cliente-detalle-notas-wrap{ margin-bottom:14px; display:flex; flex-direction:column; gap:8px; align-items:flex-start; }
   .cliente-saldo{ font-size:12px; font-weight:700; }
   .cliente-saldo.deuda{ color:#b45309; }
   .cliente-saldo.al-dia{ color:#1f7a3f; }

@@ -286,9 +286,60 @@
 
   function normalizarCliente(c){
     if (!c || typeof c !== 'object') return c;
-    if (c.notas === undefined || c.notas === null) c.notas = '';
+    if (Array.isArray(c.recordatorios)){
+      c.recordatorios = c.recordatorios.map(function(n){
+        return {
+          id: n.id || uid(),
+          texto: String(n.texto || '').trim(),
+          creadoEn: n.creadoEn || new Date().toISOString()
+        };
+      }).filter(function(n){ return n.texto; });
+    } else if (c.notas && String(c.notas).trim()){
+      c.recordatorios = [{ id: uid(), texto: String(c.notas).trim(), creadoEn: new Date().toISOString() }];
+    } else {
+      c.recordatorios = [];
+    }
+    delete c.notas;
     return c;
   }
+
+  function htmlNotasCliente(c){
+    var notas = (c.recordatorios || []);
+    if (notas.length === 0) return '';
+    return '<div class="cliente-notas-lista">' + notas.map(function(n){
+      return '<div class="cliente-nota-chip">' +
+        '<span class="cliente-nota-texto">' + escapeHtml(n.texto) + '</span>' +
+        '<button type="button" class="cliente-nota-borrar" title="Quitar nota" data-action="eliminar-nota-cliente" data-id="' + escapeHtml(c.id) + '" data-nota-id="' + escapeHtml(n.id) + '">✕</button>' +
+      '</div>';
+    }).join('') + '</div>';
+  }
+
+  window.agregarNotaCliente = function(id){
+    var c = clientePorId(id);
+    if (!c) return;
+    var texto = prompt('Nota / recordatorio para «' + c.nombre + '»:');
+    if (texto === null) return;
+    texto = texto.trim();
+    if (!texto){
+      mostrarAviso('La nota no puede estar vacía');
+      return;
+    }
+    if (!Array.isArray(c.recordatorios)) c.recordatorios = [];
+    c.recordatorios.push({ id: uid(), texto: texto, creadoEn: new Date().toISOString() });
+    persistirLocalStorage();
+    renderClientes();
+    if (clienteDetalleAbiertoId === id) verDetalleCliente(id);
+    mostrarAviso('Nota agregada ✅');
+  };
+
+  window.eliminarNotaCliente = function(clienteId, notaId){
+    var c = clientePorId(clienteId);
+    if (!c || !Array.isArray(c.recordatorios)) return;
+    c.recordatorios = c.recordatorios.filter(function(n){ return n.id !== notaId; });
+    persistirLocalStorage();
+    renderClientes();
+    if (clienteDetalleAbiertoId === clienteId) verDetalleCliente(clienteId);
+  };
 
   function montoPagadoBoleta(h){
     if (!h) return 0;
@@ -729,7 +780,7 @@
     });
     if (dup) return dup;
 
-    var nuevo = { id: uid(), nombre: nombre, notas: '' };
+    var nuevo = { id: uid(), nombre: nombre, recordatorios: [] };
     clientes.push(nuevo);
     persistirLocalStorage();
     renderClientes();
@@ -739,7 +790,6 @@ return nuevo;
   window.guardarCliente = function(ev){
     if (ev) ev.preventDefault();
     var nombre = normalizarNombreCliente(document.getElementById('cl-nombre').value);
-    var notas = (document.getElementById('cl-notas') && document.getElementById('cl-notas').value || '').trim();
     var errorEl = document.getElementById('cl-error');
     errorEl.textContent = '';
 
@@ -752,14 +802,11 @@ return nuevo;
 
     if (editandoClienteId){
       var existente = clientePorId(editandoClienteId);
-      if (existente){
-        existente.nombre = nombre;
-        existente.notas = notas;
-      }
+      if (existente) existente.nombre = nombre;
       cancelarEdicionCliente();
       mostrarAviso('Cliente actualizado ✅');
     } else {
-      clientes.push({ id: uid(), nombre: nombre, notas: notas });
+      clientes.push({ id: uid(), nombre: nombre, recordatorios: [] });
       mostrarAviso('Cliente agregado ✅');
     }
 
@@ -774,8 +821,6 @@ return nuevo;
     if (!c) return;
     editandoClienteId = id;
     document.getElementById('cl-nombre').value = c.nombre;
-    var notasEl = document.getElementById('cl-notas');
-    if (notasEl) notasEl.value = c.notas || '';
     document.getElementById('cli-editing-banner').style.display = 'flex';
     document.getElementById('cl-submit-btn').textContent = 'Guardar cambios';
     document.getElementById('cl-nombre').focus();
@@ -825,22 +870,20 @@ return nuevo;
       } else {
         wrap.innerHTML = '<div class="cat-lista">' + clientes.slice().sort(function(a,b){ return a.nombre.localeCompare(b.nombre); }).map(function(c){
           var saldo = saldoClientePorNombre(c.nombre);
-          var nota = (c.notas || '').trim();
-          var notaHtml = nota
-            ? '<div class="cliente-nota-preview" title="' + escapeHtml(nota) + '">📝 ' + escapeHtml(nota) + '</div>'
-            : '';
+          var notasHtml = htmlNotasCliente(c);
           var saldoHtml = saldo > 0.004
             ? '<div class="cliente-saldo deuda">Debe ' + money(saldo) + '</div>'
             : '<div class="cliente-saldo al-dia">Al día</div>';
           return '<div class="cat-item cliente-item">' +
             '<div class="cliente-item-main">' +
               '<span class="nombre">' + escapeHtml(c.nombre) + '</span>' +
-              notaHtml +
+              notasHtml +
               saldoHtml +
             '</div>' +
             '<span class="acciones">' +
+              '<button type="button" class="btn-icon" title="Agregar nota" data-action="agregar-nota-cliente" data-id="' + escapeHtml(c.id) + '">📝</button>' +
               '<button type="button" class="btn-icon" title="Historial de compras" data-action="ver-cliente" data-id="' + escapeHtml(c.id) + '">📋</button>' +
-              '<button type="button" class="btn-icon" title="Editar" data-action="editar-cliente" data-id="' + escapeHtml(c.id) + '">✏️</button>' +
+              '<button type="button" class="btn-icon" title="Editar nombre" data-action="editar-cliente" data-id="' + escapeHtml(c.id) + '">✏️</button>' +
               '<button type="button" class="btn-icon danger" title="Eliminar" data-action="eliminar-cliente" data-id="' + escapeHtml(c.id) + '">🗑️</button>' +
             '</span>' +
           '</div>';
@@ -857,7 +900,8 @@ return nuevo;
     var boletas = historialDelCliente(c.nombre);
     var saldo = saldoClientePorNombre(c.nombre);
     var totalComprado = boletas.reduce(function(acc, h){ return acc + (isFinite(h.total) ? h.total : 0); }, 0);
-    var nota = (c.notas || '').trim();
+    var notasHtml = htmlNotasCliente(c);
+    var sinNotas = !(c.recordatorios && c.recordatorios.length);
 
     var historialHtml = boletas.length === 0
       ? '<div class="empty-state" style="padding:16px 0;">Todavía no hay boletas guardadas para este cliente.</div>'
@@ -879,7 +923,10 @@ return nuevo;
     var html =
       '<div class="cliente-detalle-head">' +
         '<h3>' + escapeHtml(c.nombre) + '</h3>' +
-        (nota ? '<p class="cliente-detalle-notas">📝 ' + escapeHtml(nota) + '</p>' : '<p class="cliente-detalle-notas muted">Sin notas. Editá el cliente para agregar recordatorios.</p>') +
+        '<div class="cliente-detalle-notas-wrap">' +
+          (sinNotas ? '<p class="cliente-detalle-notas muted">Sin notas todavía.</p>' : notasHtml) +
+          '<button type="button" class="btn btn-ghost btn-sm" data-action="agregar-nota-cliente" data-id="' + escapeHtml(c.id) + '">📝 Agregar nota</button>' +
+        '</div>' +
       '</div>' +
       '<div class="cliente-detalle-stats">' +
         '<div><span>Total comprado</span><strong class="mono">' + money(totalComprado) + '</strong></div>' +
@@ -2158,6 +2205,8 @@ return nuevo;
         case 'editar-cliente': editarCliente(id); break;
         case 'eliminar-cliente': eliminarCliente(id); break;
         case 'ver-cliente': verDetalleCliente(id); break;
+        case 'agregar-nota-cliente': agregarNotaCliente(id); break;
+        case 'eliminar-nota-cliente': eliminarNotaCliente(id, btn.getAttribute('data-nota-id') || ''); break;
         case 'registrar-abono': {
           var inputAbono = document.getElementById('historial-abono-input');
           registrarAbonoBoleta(id, inputAbono ? inputAbono.value : 0);
