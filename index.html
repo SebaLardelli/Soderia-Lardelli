@@ -198,18 +198,32 @@
             </div>
           </div>
 
+          <div id="boleta-guardar-aviso" class="boleta-guardar-aviso" hidden>
+            <span class="boleta-guardar-aviso-icon" id="boleta-guardar-aviso-icon" aria-hidden="true">🔒</span>
+            <span id="boleta-guardar-aviso-msg" class="boleta-guardar-aviso-msg"></span>
+          </div>
+
           <div class="receipt-actions">
             <label class="pago-check pago-check-boleta" for="b-pagada">
               <input type="checkbox" id="b-pagada">
               <span>Boleta ya pagada</span>
             </label>
-            <button type="button" class="btn btn-whatsapp" id="btn-whatsapp-boleta">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.87.5 3.62 1.43 5.13L2 22l5.13-1.53a9.86 9.86 0 0 0 4.91 1.31h.01c5.46 0 9.91-4.45 9.91-9.91S17.5 2 12.04 2zm0 18.13a8.2 8.2 0 0 1-4.18-1.15l-.3-.18-3.04.91.91-2.96-.2-.31a8.18 8.18 0 0 1-1.27-4.37c0-4.53 3.69-8.22 8.22-8.22 4.53 0 8.22 3.69 8.22 8.22 0 4.53-3.69 8.22-8.22 8.22zm4.5-6.15c-.25-.12-1.46-.72-1.69-.8-.23-.08-.39-.12-.56.12-.16.25-.64.8-.78.96-.15.16-.29.18-.54.06-.25-.12-1.05-.39-2-1.23-.74-.66-1.24-1.48-1.39-1.73-.14-.25-.02-.39.11-.52.12-.12.27-.31.41-.47.14-.16.18-.27.27-.45.09-.18.04-.33-.04-.45-.08-.12-.5-1.2-.69-1.65-.18-.43-.37-.37-.51-.38h-.43c-.14 0-.37.05-.57.27-.2.22-.76.74-.76 1.8s.78 2.09.89 2.23c.11.14 1.51 2.3 3.66 3.13 1.82.7 2.19.56 2.59.52.4-.04 1.29-.53 1.47-1.04.18-.51.18-.95.13-1.04-.05-.09-.2-.14-.45-.26z"></path></svg>
-              Compartir por WhatsApp
-            </button>
+            <button type="button" class="btn btn-success btn-guardar-boleta" id="btn-guardar-historial">📥 Guardar en Historial</button>
+            <div id="boleta-acciones-compartir" class="boleta-acciones-compartir">
+              <div class="boleta-acciones-compartir-head">
+                <span class="boleta-acciones-compartir-titulo">Imprimir y compartir</span>
+                <span class="boleta-acciones-compartir-estado" id="boleta-acciones-estado">Requiere guardar</span>
+              </div>
+              <p class="boleta-acciones-compartir-hint" id="boleta-acciones-hint">Disponible después de guardar la boleta en el historial.</p>
+              <div class="boleta-acciones-compartir-botones">
+                <button type="button" class="btn btn-whatsapp" id="btn-whatsapp-boleta" disabled aria-disabled="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.87.5 3.62 1.43 5.13L2 22l5.13-1.53a9.86 9.86 0 0 0 4.91 1.31h.01c5.46 0 9.91-4.45 9.91-9.91S17.5 2 12.04 2zm0 18.13a8.2 8.2 0 0 1-4.18-1.15l-.3-.18-3.04.91.91-2.96-.2-.31a8.18 8.18 0 0 1-1.27-4.37c0-4.53 3.69-8.22 8.22-8.22 4.53 0 8.22 3.69 8.22 8.22 0 4.53-3.69 8.22-8.22 8.22zm4.5-6.15c-.25-.12-1.46-.72-1.69-.8-.23-.08-.39-.12-.56.12-.16.25-.64.8-.78.96-.15.16-.29.18-.54.06-.25-.12-1.05-.39-2-1.23-.74-.66-1.24-1.48-1.39-1.73-.14-.25-.02-.39.11-.52.12-.12.27-.31.41-.47.14-.16.18-.27.27-.45.09-.18.04-.33-.04-.45-.08-.12-.5-1.2-.69-1.65-.18-.43-.37-.37-.51-.38h-.43c-.14 0-.37.05-.57.27-.2.22-.76.74-.76 1.8s.78 2.09.89 2.23c.11.14 1.51 2.3 3.66 3.13 1.82.7 2.19.56 2.59.52.4-.04 1.29-.53 1.47-1.04.18-.51.18-.95.13-1.04-.05-.09-.2-.14-.45-.26z"></path></svg>
+                  Compartir por WhatsApp
+                </button>
+                <button type="button" class="btn btn-ghost" id="btn-imprimir-boleta" disabled aria-disabled="true">🖨️ Imprimir Boleta</button>
+              </div>
+            </div>
             <button type="button" class="btn btn-ghost" id="btn-nueva-boleta">🧹 Nueva Boleta</button>
-            <button type="button" class="btn btn-success" id="btn-guardar-historial">📥 Guardar en Historial</button>
-            <button type="button" class="btn btn-ghost" id="btn-imprimir-boleta">🖨️ Imprimir Boleta</button>
           </div>
         </div>
 

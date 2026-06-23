@@ -108,7 +108,7 @@
   }
 
   function ofrecerGuardarBoletaPendiente(mensaje){
-    if (!hayBoletaPendiente()) return true;
+    if (!hayBoletaSinGuardar()) return true;
     if (confirm(mensaje || 'Tenés productos en la boleta sin guardar en el historial. ¿Querés guardarla ahora?')){
       return guardarBoletaEnHistorialInterno();
     }
@@ -116,13 +116,13 @@
   }
 
   function confirmarDescartarBoletaPendiente(mensaje){
-    if (!hayBoletaPendiente()) return true;
+    if (!hayBoletaSinGuardar()) return true;
     return confirm(mensaje || '¿Continuar sin guardar? Se perderá la boleta actual.');
   }
 
   function resolverBoletaPendienteAntesDeReemplazar(mensajeGuardar, mensajeDescartar){
     if (!ofrecerGuardarBoletaPendiente(mensajeGuardar)) return false;
-    if (hayBoletaPendiente() && !confirmarDescartarBoletaPendiente(mensajeDescartar)) return false;
+    if (hayBoletaSinGuardar() && !confirmarDescartarBoletaPendiente(mensajeDescartar)) return false;
     return true;
   }
 
@@ -270,24 +270,80 @@
     return !!(boletaGuardadaActivaId && snapshotBoletaGuardada && snapshotBoletaActual() === snapshotBoletaGuardada);
   }
 
+  function hayBoletaSinGuardar(){
+    if (!hayBoletaPendiente()) return false;
+    return !boletaEstaGuardadaSinCambios();
+  }
+
   function validarBoletaGuardadaParaAccion(){
     if (boletaEstaGuardadaSinCambios()) return true;
-    mostrarAviso('Guardá la boleta en el historial antes de imprimir o compartir');
+    if (boletaGuardadaActivaId){
+      mostrarAviso('Hay cambios sin guardar. Guardá de nuevo para imprimir o compartir');
+    } else {
+      mostrarAviso('Primero guardá la boleta en el historial');
+    }
     return false;
   }
 
   function actualizarEstadoBotonesBoletaAccion(){
     var puede = boletaEstaGuardadaSinCambios();
-    var titulo = puede ? '' : 'Guardá la boleta en el historial primero';
+    var calc = calcularBoleta();
+    var tieneLineas = calc.lineas.length > 0;
     var btnWpp = document.getElementById('btn-whatsapp-boleta');
     var btnImp = document.getElementById('btn-imprimir-boleta');
+    var btnGuardar = document.getElementById('btn-guardar-historial');
+    var grupo = document.getElementById('boleta-acciones-compartir');
+    var aviso = document.getElementById('boleta-guardar-aviso');
+    var avisoMsg = document.getElementById('boleta-guardar-aviso-msg');
+    var avisoIcon = document.getElementById('boleta-guardar-aviso-icon');
+    var estadoEl = document.getElementById('boleta-acciones-estado');
+    var hintEl = document.getElementById('boleta-acciones-hint');
+
     if (btnWpp){
       btnWpp.disabled = !puede;
-      btnWpp.title = titulo;
+      btnWpp.setAttribute('aria-disabled', String(!puede));
     }
     if (btnImp){
       btnImp.disabled = !puede;
-      btnImp.title = titulo;
+      btnImp.setAttribute('aria-disabled', String(!puede));
+    }
+    if (btnGuardar){
+      btnGuardar.classList.toggle('destacar-guardar', tieneLineas && !puede);
+    }
+    if (grupo){
+      grupo.classList.toggle('bloqueada', tieneLineas && !puede);
+      grupo.classList.toggle('habilitada', puede);
+    }
+
+    if (!aviso || !avisoMsg) return;
+
+    if (!tieneLineas){
+      aviso.hidden = true;
+      aviso.className = 'boleta-guardar-aviso';
+      if (estadoEl) estadoEl.textContent = 'Requiere guardar';
+      if (hintEl) hintEl.textContent = 'Disponible después de guardar la boleta en el historial.';
+      return;
+    }
+
+    aviso.hidden = false;
+    if (puede){
+      aviso.className = 'boleta-guardar-aviso ok';
+      if (avisoIcon) avisoIcon.textContent = '✅';
+      avisoMsg.textContent = 'Boleta guardada en el historial. Ya podés imprimir o compartir por WhatsApp.';
+      if (estadoEl) estadoEl.textContent = 'Listo';
+      if (hintEl) hintEl.textContent = 'Estas acciones usan la boleta guardada en el historial.';
+    } else if (boletaGuardadaActivaId){
+      aviso.className = 'boleta-guardar-aviso warn cambios';
+      if (avisoIcon) avisoIcon.textContent = '⚠️';
+      avisoMsg.textContent = 'Modificaste la boleta. Guardá los cambios para volver a habilitar imprimir y compartir.';
+      if (estadoEl) estadoEl.textContent = 'Cambios sin guardar';
+      if (hintEl) hintEl.textContent = 'Volvé a usar «Guardar en Historial» antes de imprimir o compartir.';
+    } else {
+      aviso.className = 'boleta-guardar-aviso warn';
+      if (avisoIcon) avisoIcon.textContent = '🔒';
+      avisoMsg.textContent = 'Guardá la boleta en el historial para habilitar imprimir y compartir por WhatsApp.';
+      if (estadoEl) estadoEl.textContent = 'Bloqueado';
+      if (hintEl) hintEl.textContent = 'Paso obligatorio: primero «Guardar en Historial», después imprimir o compartir.';
     }
   }
 
@@ -2789,7 +2845,7 @@ return nuevo;
     bindEventosUI();
 
     window.addEventListener('beforeunload', function(ev){
-      if (!hayBoletaPendiente()) return;
+      if (!hayBoletaSinGuardar()) return;
       ev.preventDefault();
       ev.returnValue = '';
     });
