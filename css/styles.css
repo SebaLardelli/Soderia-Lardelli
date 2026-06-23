@@ -17,6 +17,10 @@
     --danger-soft:#fde8ec;
     --gold:#1a4d8c;
     --highlight:#fff8e6;
+    --nota-bg:#f0f5fb;
+    --nota-bg-end:#e8eef6;
+    --nota-border:#c8d8ea;
+    --nota-chip-bg:#ffffff;
     --font-display: "Source Serif 4", Georgia, "Iowan Old Style", "Times New Roman", serif;
     --font-hand: "Caveat", "Segoe Script", cursive;
     --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -357,9 +361,9 @@
     margin-top:2px; padding:8px 10px 9px;
     border-radius:var(--radius); width:100%; max-width:100%; min-width:0;
     box-sizing:border-box; align-self:stretch;
-    background:linear-gradient(135deg, #fffbeb 0%, var(--highlight) 100%);
-    border:1px solid #f0dcc0; border-left:4px solid var(--gold);
-    box-shadow:0 2px 8px rgba(26,77,140,.07);
+    background:linear-gradient(135deg, var(--nota-bg) 0%, var(--nota-bg-end) 100%);
+    border:1px solid var(--nota-border); border-left:4px solid var(--gold);
+    box-shadow:0 2px 8px rgba(26,77,140,.06);
   }
   .cliente-notas-etiqueta{
     font-size:10px; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
@@ -368,13 +372,13 @@
   .cliente-nota-form{
     display:flex; flex-direction:row; flex-wrap:wrap; align-items:center; gap:8px;
     padding:10px 12px; width:100%; max-width:100%; box-sizing:border-box;
-    border:1.5px dashed var(--gold); border-radius:var(--radius);
-    background:linear-gradient(180deg, #fffdf8 0%, #fff8ed 100%);
-    box-shadow:0 2px 8px rgba(26,77,140,.06);
+    border:1.5px dashed var(--nota-border); border-radius:var(--radius);
+    background:var(--paper);
+    box-shadow:0 1px 4px rgba(26,77,140,.05);
   }
   .cliente-nota-input{
     flex:1 1 140px; min-width:0; width:auto;
-    padding:9px 11px; border:1.5px solid #e8dcc8; border-radius:8px;
+    padding:9px 11px; border:1.5px solid var(--line-soft); border-radius:8px;
     background:#fff; color:var(--ink); font-size:14px;
   }
   .cliente-nota-input:focus{
@@ -395,8 +399,8 @@
     align-items:center; column-gap:8px;
     width:100%; max-width:100%; min-width:0; box-sizing:border-box;
     padding:7px 10px;
-    border:1px solid #f0dcc0; border-radius:9px;
-    background:#fff; box-shadow:0 1px 3px rgba(11,36,71,.06);
+    border:1px solid var(--line-soft); border-radius:9px;
+    background:var(--nota-chip-bg); box-shadow:0 1px 3px rgba(11,36,71,.04);
   }
   .cliente-nota-icon{
     grid-column:1; font-size:13px; line-height:1; opacity:.85;
@@ -412,7 +416,7 @@
   }
   .cliente-nota-borrar{
     grid-column:3;
-    width:26px; height:26px; border:1px solid #eadfce;
+    width:26px; height:26px; border:1px solid var(--line-soft);
     border-radius:999px; background:#fff; color:var(--muted);
     cursor:pointer; font-size:13px; font-weight:700; line-height:1;
     display:flex; align-items:center; justify-content:center;
@@ -423,9 +427,9 @@
   }
   .cliente-detalle-notas-wrap{
     margin-bottom:14px; width:100%; padding:12px 14px;
-    border-radius:var(--radius-lg); border:1px solid #f0dcc0;
-    background:linear-gradient(135deg, #fffbeb 0%, var(--highlight) 100%);
-    box-shadow:0 2px 10px rgba(26,77,140,.08);
+    border-radius:var(--radius-lg); border:1px solid var(--nota-border);
+    background:linear-gradient(135deg, var(--nota-bg) 0%, var(--nota-bg-end) 100%);
+    box-shadow:0 2px 10px rgba(26,77,140,.06);
     display:flex; flex-direction:column; gap:10px; align-items:stretch;
   }
   .cliente-saldo{ font-size:12px; font-weight:700; width:100%; }
