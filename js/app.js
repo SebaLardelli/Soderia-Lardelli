@@ -1622,7 +1622,9 @@ return nuevo;
     };
     var doble = document.getElementById('print-doble');
     if (!doble) return;
-    doble.innerHTML = construirReceiptEstatico(datos, 'Comprobante');
+    doble.innerHTML =
+      construirReceiptEstatico(datos, 'Copia comercio') +
+      construirReceiptEstatico(datos, 'Copia cliente');
     window.print();
     mostrarAviso('Comprobante listo para imprimir 🖨️');
   };
@@ -1790,7 +1792,7 @@ return nuevo;
             '<input type="number" id="historial-abono-input" class="mono" min="0.01" step="0.01" max="' + saldo + '" placeholder="Ej: 5000" aria-label="Monto del abono">' +
           '</div>' +
         '</div>' +
-        '<button type="button" class="btn btn-primary pago-parcial-btn" data-action="registrar-abono" data-id="' + escapeHtml(h.id) + '">Registrar pago parcial</button>' +
+        '<button type="button" class="btn btn-primary pago-parcial-btn" data-action="registrar-abono" data-id="' + escapeHtml(h.id) + '">Pago parcial</button>' +
       '</div>' +
       '<p class="pago-parcial-nota">La boleta sigue pendiente hasta saldar el total o marcarla como pagada.</p>' +
     '</div>';
