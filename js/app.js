@@ -164,11 +164,12 @@
     }
 
     el.classList.remove('field-ok');
-    var similares = buscarClientesSimilares(nombre).filter(function(c){
+    var similares = clientesFiltradosBoleta(nombre).filter(function(c){
       return c.nombre.toLowerCase() !== nombre.toLowerCase();
-    });
+    }).slice(0, 3);
     if (similares.length > 0){
-      setHint('info', 'Cliente nuevo. ¿Quisiste decir «' + similares[0].nombre + '»?');
+      var sugerencias = similares.map(function(c){ return '«' + c.nombre + '»'; }).join(', ');
+      setHint('info', '¿Quisiste decir ' + sugerencias + '?');
     } else {
       setHint('info', 'Cliente nuevo — se agregará a tu lista al guardar la boleta.');
     }
@@ -1380,24 +1381,50 @@ return nuevo;
     /* datalist removido: la boleta usa el desplegable con flecha */
   }
 
+  function puntajeCoincidenciaCliente(nombre, query){
+    var cn = nombre.toLowerCase();
+    var n = query.toLowerCase();
+    if (!n) return 0;
+    if (cn.indexOf(n) === 0) return 0;
+    if (cn.split(/\s+/).some(function(p){ return p.indexOf(n) === 0; })) return 1;
+    if (cn.indexOf(n) !== -1) return 2;
+    return 99;
+  }
+
   function clientesFiltradosBoleta(query){
-    query = (query || '').toLowerCase().trim();
-    return clientes.slice().sort(function(a, b){
+    query = normalizarNombreCliente(query);
+    var q = query.toLowerCase();
+    return clientes.filter(function(c){
+      if (!q) return true;
+      return c.nombre.toLowerCase().indexOf(q) !== -1;
+    }).sort(function(a, b){
+      var pa = puntajeCoincidenciaCliente(a.nombre, q);
+      var pb = puntajeCoincidenciaCliente(b.nombre, q);
+      if (pa !== pb) return pa - pb;
       return a.nombre.localeCompare(b.nombre, 'es');
-    }).filter(function(c){
-      if (!query) return true;
-      return c.nombre.toLowerCase().indexOf(query) !== -1;
     });
+  }
+
+  function resaltarCoincidenciaCliente(nombre, query){
+    if (!query) return escapeHtml(nombre);
+    var q = query.toLowerCase();
+    var cn = nombre.toLowerCase();
+    var idx = cn.indexOf(q);
+    if (idx === -1) return escapeHtml(nombre);
+    return escapeHtml(nombre.slice(0, idx)) +
+      '<mark class="boleta-cliente-match">' + escapeHtml(nombre.slice(idx, idx + q.length)) + '</mark>' +
+      escapeHtml(nombre.slice(idx + q.length));
   }
 
   function renderListaClientesBoleta(){
     var lista = document.getElementById('boleta-clientes-lista');
     var input = document.getElementById('b-cliente');
     if (!lista) return;
-    var filtrados = clientesFiltradosBoleta(input ? input.value : '');
+    var query = input ? normalizarNombreCliente(input.value) : '';
+    var filtrados = clientesFiltradosBoleta(query);
     if (filtrados.length === 0){
       lista.innerHTML = '<div class="boleta-clientes-vacio">No hay clientes' +
-        ((input && input.value.trim()) ? ' que coincidan con la búsqueda' : ' cargados') + '.</div>';
+        (query ? ' que coincidan con «' + escapeHtml(query) + '»' : ' cargados') + '.</div>';
       return;
     }
     lista.innerHTML = filtrados.map(function(c){
@@ -1406,10 +1433,23 @@ return nuevo;
         ? '<span class="boleta-cliente-saldo deuda">' + money(saldo) + '</span>'
         : '<span class="boleta-cliente-saldo al-dia">Al día</span>';
       return '<button type="button" class="boleta-cliente-opcion" role="option" data-action="elegir-cliente-boleta" data-nombre="' + escapeHtml(c.nombre) + '">' +
-        '<span class="boleta-cliente-nombre">' + escapeHtml(c.nombre) + '</span>' +
+        '<span class="boleta-cliente-nombre">' + resaltarCoincidenciaCliente(c.nombre, query) + '</span>' +
         saldoHtml +
       '</button>';
     }).join('');
+  }
+
+  function actualizarSugerenciasClienteBoleta(){
+    if (boletaEstaBloqueada()) return;
+    var input = document.getElementById('b-cliente');
+    if (!input) return;
+    var query = normalizarNombreCliente(input.value);
+    if (query.length < 1){
+      cerrarListaClientesBoleta();
+      return;
+    }
+    renderListaClientesBoleta();
+    toggleListaClientesBoleta(true);
   }
 
   function listaClientesBoletaEstaAbierta(){
@@ -2840,9 +2880,16 @@ return nuevo;
     if (bNegocio) bNegocio.addEventListener('input', guardarNegocio);
     if (bCliente){
       bCliente.addEventListener('input', function(){
+        actualizarSugerenciasClienteBoleta();
         validarClienteBoleta(false);
         actualizarEstadoBotonesBoletaAccion();
-        if (listaClientesBoletaEstaAbierta()) renderListaClientesBoleta();
+      });
+      bCliente.addEventListener('focus', function(){
+        if (boletaEstaBloqueada()) return;
+        if (normalizarNombreCliente(bCliente.value).length >= 1) actualizarSugerenciasClienteBoleta();
+      });
+      bCliente.addEventListener('keydown', function(ev){
+        if (ev.key === 'Escape') cerrarListaClientesBoleta();
       });
       bCliente.addEventListener('change', function(){
         normalizarClienteBoleta();
