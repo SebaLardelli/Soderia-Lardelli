@@ -267,6 +267,10 @@
     margin-bottom:14px; flex-wrap:wrap;
   }
   .historial-toolbar .search-row{ flex:1; min-width:220px; margin-bottom:0; }
+  .historial-toolbar-acciones{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap; flex:1; justify-content:flex-end;
+  }
+  .historial-toolbar-acciones .search-row{ flex:1 1 220px; max-width:280px; }
 
   .historial-lista{ display:flex; flex-direction:column; gap:10px; }
   .historial-item{
@@ -463,14 +467,51 @@
   .btn-sm{ padding:7px 10px; font-size:12px; }
 
   .pago-parcial-box{
-    margin-top:10px; padding:10px 12px; border:1px dashed var(--line); border-radius:var(--radius);
-    background:var(--paper);
+    margin:10px 0; padding:12px; border:1px solid var(--nota-border); border-radius:var(--radius);
+    background:var(--nota-bg);
   }
+  .pago-parcial-titulo{
+    font-size:12px; font-weight:800; letter-spacing:.05em; text-transform:uppercase;
+    color:var(--gold); margin-bottom:10px;
+  }
+  .pago-parcial-resumen{
+    display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; margin-bottom:10px;
+  }
+  .pago-parcial-stat{
+    padding:8px 10px; border-radius:8px; background:#fff; border:1px solid var(--line-soft);
+    display:flex; flex-direction:column; gap:4px;
+  }
+  .pago-parcial-stat span{ font-size:11px; color:var(--muted); font-weight:600; }
+  .pago-parcial-stat strong{ font-size:15px; color:var(--ink); }
+  .pago-parcial-stat.deuda strong{ color:#b45309; }
+  .pago-abonos-lista{ margin-bottom:10px; }
+  .pago-abonos-titulo{
+    font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase;
+    letter-spacing:.04em; margin-bottom:6px;
+  }
+  .pago-abonos-items{
+    list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px;
+  }
+  .pago-abono-item{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:7px 10px; border-radius:8px; background:#fff; border:1px solid var(--line-soft);
+    font-size:13px;
+  }
+  .pago-abono-monto{ font-weight:700; color:var(--ink); }
+  .pago-abono-fecha{ color:var(--muted); font-size:12px; }
   .pago-parcial-form{
-    display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;
+    display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr) auto; gap:8px;
+    align-items:end; margin-top:4px;
   }
+  .pago-parcial-field{ display:flex; flex-direction:column; gap:4px; min-width:0; }
+  .pago-parcial-field label{ font-size:11px; font-weight:700; color:var(--muted); }
   .pago-parcial-form input{
-    flex:1; min-width:120px; padding:8px 10px; border:1px solid var(--line); border-radius:var(--radius);
+    width:100%; min-width:0; padding:9px 10px; border:1px solid var(--line); border-radius:8px;
+    background:#fff; font-size:14px; box-sizing:border-box;
+  }
+  .pago-parcial-btn{ white-space:nowrap; align-self:end; }
+  .pago-parcial-nota{
+    margin:10px 0 0; font-size:11.5px; color:var(--muted); line-height:1.4;
   }
   .saldo-parcial small{ display:block; font-size:11px; color:var(--muted); font-weight:500; }
 
@@ -1082,9 +1123,15 @@
     .historial-item .monto{ order:3; flex:0 0 auto; align-self:flex-start; }
 
     .pago-parcial-box{ padding:10px; }
-    .pago-parcial-form{ flex-direction:column; align-items:stretch; }
-    .pago-parcial-form input{ min-width:0; width:100%; }
-    .pago-parcial-form .btn{ width:100%; justify-content:center; }
+    .pago-parcial-resumen{ grid-template-columns:1fr 1fr; }
+    .pago-parcial-form{
+      grid-template-columns:1fr; align-items:stretch;
+    }
+    .pago-parcial-btn{ width:100%; justify-content:center; }
+
+    .historial-toolbar-acciones{ width:100%; justify-content:stretch; }
+    .historial-toolbar-acciones .search-row{ max-width:none; flex:1 1 100%; }
+    #btn-reset-numeracion{ width:100%; justify-content:center; }
     .pago-detalle-row{
       flex-direction:column; align-items:stretch; gap:8px;
     }

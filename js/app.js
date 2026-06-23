@@ -6,6 +6,7 @@
   var categorias = [];          // {id, nombre}
   var categoriaFiltro = '';     // '' = todas
   var contadorBoleta = 1;
+  var contadorBoletaManual = false;
   var cantidades = {};          // productoId -> cantidad elegida en la boleta actual
   var itemsManuales = [];       // [{id, nombre, precio, cantidad}]
   var editandoId = null;
@@ -58,6 +59,7 @@
   }
 
   function sincronizarContadorBoleta(){
+    if (contadorBoletaManual) return;
     var max = 0;
     historial.forEach(function(h){
       var n = parseInt(String(h.numero || '').replace(/\D/g, ''), 10);
@@ -65,6 +67,19 @@
     });
     if (max >= contadorBoleta) contadorBoleta = max + 1;
   }
+
+  window.resetearNumeracionBoletas = function(){
+    var msg = 'La próxima boleta nueva va a ser N° 0001.';
+    if (historial.length > 0){
+      msg += '\n\nLas boletas del historial no se borran. Si dejaste una de prueba, eliminala desde el historial (🗑️) para no repetir el número.';
+    }
+    if (!confirm(msg + '\n\n¿Resetear la numeración?')) return;
+    contadorBoleta = 1;
+    contadorBoletaManual = true;
+    actualizarNumeroBoleta();
+    persistirLocalStorage();
+    mostrarAviso('Próxima boleta: N° 0001');
+  };
 
   function hayBoletaPendiente(){
     return calcularBoleta().lineas.length > 0;
@@ -262,6 +277,7 @@
       productos: productos,
       categorias: categorias,
       contadorBoleta: contadorBoleta,
+      contadorBoletaManual: contadorBoletaManual,
       negocio: document.getElementById('b-negocio') ? (document.getElementById('b-negocio').value || '') : '',
       historial: historial,
       clientes: clientes
@@ -279,6 +295,28 @@
       h.montoPagado = h.pagada ? (h.total || 0) : 0;
     } else {
       h.montoPagado = Math.max(0, parseFloat(h.montoPagado) || 0);
+    }
+    if (!Array.isArray(h.abonos)) h.abonos = [];
+    h.abonos = h.abonos.map(function(a){
+      return {
+        id: a.id || uid(),
+        monto: Math.max(0, parseFloat(a.monto) || 0),
+        fecha: a.fecha || hoyISO(),
+        registradoEn: a.registradoEn || new Date().toISOString()
+      };
+    }).filter(function(a){ return a.monto > 0.004; });
+    if (h.abonos.length === 0 && h.montoPagado > 0.004 && !h.pagada){
+      h.abonos.push({
+        id: uid(),
+        monto: h.montoPagado,
+        fecha: (h.pagadaEn || h.guardadoEn || h.fecha || hoyISO()).slice(0, 10),
+        registradoEn: h.guardadoEn || new Date().toISOString()
+      });
+    }
+    if (h.abonos.length > 0){
+      var sumaAbonos = h.abonos.reduce(function(acc, a){ return acc + a.monto; }, 0);
+      var total = isFinite(h.total) ? h.total : 0;
+      h.montoPagado = Math.min(sumaAbonos, total);
     }
     if (h.recordatorioSemana === undefined) h.recordatorioSemana = 0;
     sincronizarEstadoPagoBoleta(h);
@@ -429,6 +467,103 @@
     return 'Pago pendiente';
   }
 
+  function recalcularTotalesBoletaHistorial(h){
+    var subtotal = 0;
+    (h.lineas || []).forEach(function(l){
+      var precio = parseFloat(l.precio) || 0;
+      var cant = parseFloat(l.cantidad) || 0;
+      l.subtotal = precio * cant;
+      subtotal += l.subtotal;
+    });
+    h.subtotal = subtotal;
+    var descuento = Math.max(0, parseFloat(h.descuentoMonto) || 0);
+    if (descuento > subtotal) descuento = subtotal;
+    h.descuentoMonto = descuento;
+    h.total = Math.max(0, subtotal - descuento);
+  }
+
+  function ajustarPagosBoletaTrasCambioTotal(h){
+    var total = h.total || 0;
+    var pagado = montoPagadoBoleta(h);
+    if (pagado > total + 0.004){
+      if (Array.isArray(h.abonos) && h.abonos.length > 0){
+        var acum = 0;
+        var nuevos = [];
+        h.abonos.forEach(function(abono){
+          if (acum >= total - 0.004) return;
+          var resto = total - acum;
+          if (abono.monto <= resto + 0.004){
+            nuevos.push(abono);
+            acum += abono.monto;
+          } else if (resto > 0.004){
+            nuevos.push({
+              id: abono.id,
+              monto: resto,
+              fecha: abono.fecha,
+              registradoEn: abono.registradoEn
+            });
+            acum = total;
+          }
+        });
+        h.abonos = nuevos;
+        h.montoPagado = acum;
+      } else {
+        h.montoPagado = total;
+      }
+    }
+    sincronizarEstadoPagoBoleta(h);
+  }
+
+  function lineaHistorialEsProducto(linea, productoId, nombreAnterior){
+    if (!linea || linea.manual) return false;
+    if (linea.id && String(linea.id) === String(productoId)) return true;
+    return !linea.id && nombreAnterior && linea.nombre === nombreAnterior;
+  }
+
+  function actualizarBoletasPendientesPorProducto(producto, opts){
+    opts = opts || {};
+    if (!producto) return { boletas: 0, lineas: 0 };
+    var productoId = String(producto.id);
+    var nombreAnterior = opts.nombreAnterior || producto.nombre;
+    var precioAnterior = opts.precioAnterior;
+    var lineasActualizadas = 0;
+    var boletasAfectadas = 0;
+
+    historial.forEach(function(h){
+      if (boletaEstaPagada(h)) return;
+      var tocada = false;
+      (h.lineas || []).forEach(function(l){
+        if (!lineaHistorialEsProducto(l, productoId, nombreAnterior)) return;
+        if (!l.id) l.id = producto.id;
+        if (l.nombre !== producto.nombre) l.nombre = producto.nombre;
+        if (precioAnterior === undefined || l.precio !== producto.precio){
+          if (l.precio !== producto.precio){
+            l.precio = producto.precio;
+            lineasActualizadas++;
+          }
+          tocada = true;
+        } else if (opts.nombreAnterior && opts.nombreAnterior !== producto.nombre){
+          tocada = true;
+        }
+      });
+      if (tocada){
+        recalcularTotalesBoletaHistorial(h);
+        ajustarPagosBoletaTrasCambioTotal(h);
+        boletasAfectadas++;
+      }
+    });
+
+    return { boletas: boletasAfectadas, lineas: lineasActualizadas };
+  }
+
+  function refrescarVistasTrasCambioHistorial(){
+    actualizarStatHistorial();
+    renderHistorial();
+    renderClientes();
+    if (historialDetalleAbiertoId) verDetalleHistorial(historialDetalleAbiertoId);
+    if (clienteDetalleAbiertoId) verDetalleCliente(clienteDetalleAbiertoId);
+  }
+
   function historialDelCliente(nombre){
     var n = normalizarNombreCliente(nombre).toLowerCase();
     if (!n) return [];
@@ -467,6 +602,7 @@
     productos = datos.productos || [];
     categorias = Array.isArray(datos.categorias) ? datos.categorias : [];
     contadorBoleta = datos.contadorBoleta || 1;
+    contadorBoletaManual = !!datos.contadorBoletaManual;
     historial = Array.isArray(datos.historial) ? datos.historial.map(normalizarBoletaHistorial) : [];
     clientes = Array.isArray(datos.clientes) ? datos.clientes.map(normalizarCliente) : [];
     sincronizarContadorBoleta();
@@ -480,6 +616,7 @@
       localStorage.setItem('gb_productos', JSON.stringify(productos));
       localStorage.setItem('gb_categorias', JSON.stringify(categorias));
       localStorage.setItem('gb_contador', String(contadorBoleta));
+      localStorage.setItem('gb_contador_manual', contadorBoletaManual ? '1' : '0');
       localStorage.setItem('gb_historial', JSON.stringify(historial));
       localStorage.setItem('gb_clientes', JSON.stringify(clientes));
       if (document.getElementById('b-negocio')){
@@ -603,6 +740,7 @@
       if (ls){ datos.productos = JSON.parse(ls); }
       var lsC = localStorage.getItem('gb_contador');
       if (lsC){ datos.contadorBoleta = parseInt(lsC, 10) || 1; }
+      datos.contadorBoletaManual = localStorage.getItem('gb_contador_manual') === '1';
       var lsN = localStorage.getItem('gb_negocio');
       if (lsN){ datos.negocio = lsN; }
       var lsCat = localStorage.getItem('gb_categorias');
@@ -1015,18 +1153,35 @@ return nuevo;
     if (!nombre){ errorEl.textContent = 'Poné un nombre para el producto.'; return false; }
     if (isNaN(precio) || precio < 0){ errorEl.textContent = 'El precio tiene que ser un número mayor o igual a 0.'; return false; }
 
+    var avisoTexto = '';
+    var refrescarHistorialPendiente = false;
+
     if (editandoId){
       var existente = productos.find(function(p){ return p.id === editandoId; });
       if (existente){
         var codigo = document.getElementById('p-codigo').value.trim();
-        existente.nombre = nombre; existente.precio = precio; existente.codigo = codigo; existente.categoriaId = categoriaId;
+        var nombreAnterior = existente.nombre;
+        var precioAnterior = existente.precio;
+        existente.nombre = nombre;
+        existente.precio = precio;
+        existente.codigo = codigo;
+        existente.categoriaId = categoriaId;
+        var syncHistorial = actualizarBoletasPendientesPorProducto(existente, {
+          nombreAnterior: nombreAnterior,
+          precioAnterior: precioAnterior
+        });
+        refrescarHistorialPendiente = syncHistorial.boletas > 0;
+        avisoTexto = refrescarHistorialPendiente
+          ? ('Producto actualizado ✅ · ' + syncHistorial.boletas + (syncHistorial.boletas === 1 ? ' boleta pendiente' : ' boletas pendientes') + ' con nuevo precio')
+          : 'Producto actualizado ✅';
+      } else {
+        avisoTexto = 'Producto actualizado ✅';
       }
       cancelarEdicion();
-      mostrarAviso('Producto actualizado ✅');
     } else {
       var nuevoId = nuevoIdProducto();
       productos.push({ id: nuevoId, nombre: nombre, precio: precio, codigo: nuevoId, categoriaId: categoriaId });
-      mostrarAviso('Producto agregado ✅ · N° ' + nuevoId);
+      avisoTexto = 'Producto agregado ✅ · N° ' + nuevoId;
     }
 
     document.getElementById('form-producto').reset();
@@ -1036,6 +1191,8 @@ return nuevo;
     renderCategorias();
     renderFiltrosCategoriaBoleta();
     renderListaBoleta();
+    if (refrescarHistorialPendiente) refrescarVistasTrasCambioHistorial();
+    mostrarAviso(avisoTexto);
     return false;
   };
 
@@ -1574,17 +1731,45 @@ return nuevo;
     '</label>';
   }
 
+  function htmlListaAbonosBoleta(h){
+    if (!h.abonos || h.abonos.length === 0) return '';
+    var items = h.abonos.slice().sort(function(a, b){
+      return String(a.fecha || '').localeCompare(String(b.fecha || ''));
+    }).map(function(a){
+      return '<li class="pago-abono-item">' +
+        '<span class="pago-abono-monto mono">' + money(a.monto) + '</span>' +
+        '<span class="pago-abono-fecha">' + formatearFechaLegible(a.fecha) + '</span>' +
+      '</li>';
+    }).join('');
+    return '<div class="pago-abonos-lista">' +
+      '<div class="pago-abonos-titulo">Abonos registrados</div>' +
+      '<ul class="pago-abonos-items">' + items + '</ul>' +
+    '</div>';
+  }
+
   function htmlPagoParcialDetalle(h){
-    if (boletaEstaPagada(h)) return '';
+    if (boletaEstaPagada(h)) return htmlListaAbonosBoleta(h);
     var saldo = saldoPendienteBoleta(h);
     var pagado = montoPagadoBoleta(h);
     return '<div class="pago-parcial-box">' +
-      '<div class="row"><span>Pagado</span><span class="v mono">' + money(pagado) + '</span></div>' +
-      '<div class="row"><span>Saldo</span><span class="v mono deuda">' + money(saldo) + '</span></div>' +
-      '<div class="pago-parcial-form">' +
-        '<input type="number" id="historial-abono-input" min="0.01" step="0.01" placeholder="Monto del abono" aria-label="Monto del abono">' +
-        '<button type="button" class="btn btn-primary" data-action="registrar-abono" data-id="' + escapeHtml(h.id) + '">Registrar abono</button>' +
+      '<div class="pago-parcial-titulo">Pago parcial</div>' +
+      '<div class="pago-parcial-resumen">' +
+        '<div class="pago-parcial-stat"><span>Pagado</span><strong class="mono">' + money(pagado) + '</strong></div>' +
+        '<div class="pago-parcial-stat deuda"><span>Saldo</span><strong class="mono">' + money(saldo) + '</strong></div>' +
       '</div>' +
+      htmlListaAbonosBoleta(h) +
+      '<div class="pago-parcial-form">' +
+        '<div class="pago-parcial-field">' +
+          '<label for="historial-abono-fecha">Fecha del abono</label>' +
+          '<input type="date" id="historial-abono-fecha" value="' + hoyISO() + '" aria-label="Fecha del abono">' +
+        '</div>' +
+        '<div class="pago-parcial-field">' +
+          '<label for="historial-abono-input">Monto</label>' +
+          '<input type="number" id="historial-abono-input" min="0.01" step="0.01" max="' + saldo + '" placeholder="Cuánto te abonó" aria-label="Monto del abono">' +
+        '</div>' +
+        '<button type="button" class="btn btn-primary pago-parcial-btn" data-action="registrar-abono" data-id="' + escapeHtml(h.id) + '">Registrar pago parcial</button>' +
+      '</div>' +
+      '<p class="pago-parcial-nota">La boleta sigue pendiente hasta saldar el total o marcarla como pagada.</p>' +
     '</div>';
   }
 
@@ -1611,6 +1796,7 @@ return nuevo;
       '</div>' +
       '<div class="monto mono">' + montoHtml + '</div>' +
       '<div class="acciones">' +
+        '<button type="button" class="btn-icon" title="Pago parcial" data-action="pago-parcial-historial" data-id="' + escapeHtml(h.id) + '">💵</button>' +
         '<button type="button" class="btn-icon" title="Ver boleta" data-action="ver-historial" data-id="' + escapeHtml(h.id) + '">👁️</button>' +
         '<button type="button" class="btn-icon" title="Compartir por WhatsApp" data-action="wpp-historial" data-id="' + escapeHtml(h.id) + '">💬</button>' +
         '<button type="button" class="btn-icon danger" title="Eliminar" data-action="eliminar-historial" data-id="' + escapeHtml(h.id) + '">🗑️</button>' +
@@ -1857,10 +2043,21 @@ return nuevo;
     var h = buscarEnHistorial(id);
     if (!h) return;
     if (pagada){
+      var saldo = saldoPendienteBoleta(h);
+      if (saldo > 0.004){
+        if (!Array.isArray(h.abonos)) h.abonos = [];
+        h.abonos.push({
+          id: uid(),
+          monto: saldo,
+          fecha: hoyISO(),
+          registradoEn: new Date().toISOString()
+        });
+      }
       h.montoPagado = h.total || 0;
       h.pagadaEn = new Date().toISOString();
     } else {
       h.montoPagado = 0;
+      h.abonos = [];
       delete h.pagadaEn;
     }
     sincronizarEstadoPagoBoleta(h);
@@ -1869,10 +2066,10 @@ return nuevo;
     renderClientes();
     if (historialDetalleAbiertoId === id) verDetalleHistorial(id);
     if (clienteDetalleAbiertoId) verDetalleCliente(clienteDetalleAbiertoId);
-    mostrarAviso(boletaEstaPagada(h) ? 'Boleta pagada y archivada ✅' : (boletaEsParcial(h) ? 'Quedó pago parcial' : 'Pago pendiente · boleta activa'));
+    mostrarAviso(boletaEstaPagada(h) ? 'Boleta pagada y archivada ✅' : 'Pago pendiente · boleta activa');
   };
 
-  window.registrarAbonoBoleta = function(id, monto){
+  window.registrarAbonoBoleta = function(id, monto, fecha){
     var h = buscarEnHistorial(id);
     if (!h) return;
     monto = parseFloat(monto);
@@ -1885,6 +2082,14 @@ return nuevo;
       mostrarAviso('El abono no puede superar el saldo (' + money(saldo) + ')');
       return;
     }
+    if (!fecha || !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) fecha = hoyISO();
+    if (!Array.isArray(h.abonos)) h.abonos = [];
+    h.abonos.push({
+      id: uid(),
+      monto: monto,
+      fecha: fecha,
+      registradoEn: new Date().toISOString()
+    });
     h.montoPagado = montoPagadoBoleta(h) + monto;
     if (boletaEstaPagada(h)) h.pagadaEn = new Date().toISOString();
     sincronizarEstadoPagoBoleta(h);
@@ -1893,7 +2098,9 @@ return nuevo;
     renderClientes();
     if (historialDetalleAbiertoId === id) verDetalleHistorial(id);
     if (clienteDetalleAbiertoId) verDetalleCliente(clienteDetalleAbiertoId);
-    mostrarAviso(boletaEstaPagada(h) ? 'Boleta saldada ✅' : ('Abono registrado · saldo ' + money(saldoPendienteBoleta(h))));
+    mostrarAviso(boletaEstaPagada(h)
+      ? 'Boleta saldada ✅'
+      : ('Pago parcial registrado · saldo ' + money(saldoPendienteBoleta(h))));
   };
 
   window.compartirDesdeHistorial = function(id){
@@ -2195,9 +2402,11 @@ return nuevo;
     var buscador = document.getElementById('buscador');
     var buscadorCatalogo = document.getElementById('buscador-catalogo');
     var buscadorHistorial = document.getElementById('buscador-historial');
+    var btnResetNumeracion = document.getElementById('btn-reset-numeracion');
     if (buscador) buscador.addEventListener('input', renderListaBoleta);
     if (buscadorCatalogo) buscadorCatalogo.addEventListener('input', renderProductos);
     if (buscadorHistorial) buscadorHistorial.addEventListener('input', renderHistorial);
+    if (btnResetNumeracion) btnResetNumeracion.addEventListener('click', resetearNumeracionBoletas);
 
     document.body.addEventListener('keydown', function(ev){
       if (ev.key !== 'Enter') return;
@@ -2279,9 +2488,15 @@ return nuevo;
         case 'eliminar-nota-cliente': eliminarNotaCliente(id, btn.getAttribute('data-nota-id') || ''); break;
         case 'registrar-abono': {
           var inputAbono = document.getElementById('historial-abono-input');
-          registrarAbonoBoleta(id, inputAbono ? inputAbono.value : 0);
+          var inputFecha = document.getElementById('historial-abono-fecha');
+          registrarAbonoBoleta(
+            id,
+            inputAbono ? inputAbono.value : 0,
+            inputFecha ? inputFecha.value : ''
+          );
           break;
         }
+        case 'pago-parcial-historial': verDetalleHistorial(id); break;
         case 'editar-producto': editarProducto(id); break;
         case 'eliminar-producto': eliminarProducto(id); break;
         case 'filtro-categoria': setFiltroCategoriaBoleta(btn.getAttribute('data-cat') || ''); break;
