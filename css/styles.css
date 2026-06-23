@@ -829,6 +829,26 @@
     margin-top:14px; font-weight:500;
   }
 
+  .boleta-productos-bloqueo{
+    margin-bottom:12px; padding:10px 12px; border-radius:9px;
+    border:1.5px solid #9FD4B8; background:var(--success-soft); color:#0d5c40;
+    font-size:12.5px; font-weight:700; line-height:1.4;
+  }
+  .boleta-productos-bloqueo[hidden]{ display:none !important; }
+  .card-boleta-productos.boleta-edicion-bloqueada .cat-filtros,
+  .card-boleta-productos.boleta-edicion-bloqueada .search-row,
+  .card-boleta-productos.boleta-edicion-bloqueada .lista-meta,
+  .card-boleta-productos.boleta-edicion-bloqueada .boleta-scroll{
+    opacity:.45; pointer-events:none; user-select:none;
+  }
+  .boleta-guardada-activa #boleta-imprimible .receipt-meta input,
+  .boleta-guardada-activa #boleta-imprimible .receipt-meta select,
+  .boleta-guardada-activa #boleta-imprimible .desc-control input,
+  .boleta-guardada-activa #boleta-imprimible .desc-control select,
+  .boleta-guardada-activa .pago-check-boleta input{
+    opacity:.75; pointer-events:none;
+  }
+
   .receipt-actions{ display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; }
   .receipt-actions .btn{ flex:1; min-width:120px; }
   .receipt-actions .btn-guardar-boleta{ flex:1 1 100%; }

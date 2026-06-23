@@ -257,13 +257,46 @@
   function marcarBoletaGuardada(id){
     boletaGuardadaActivaId = id;
     snapshotBoletaGuardada = snapshotBoletaActual();
-    actualizarEstadoBotonesBoletaAccion();
+    aplicarBloqueoBoletaUI();
   }
 
   function limpiarBoletaGuardada(){
     boletaGuardadaActivaId = null;
     snapshotBoletaGuardada = null;
+    aplicarBloqueoBoletaUI();
+  }
+
+  function boletaEstaBloqueada(){
+    return boletaEstaGuardadaSinCambios();
+  }
+
+  function aplicarBloqueoBoletaUI(){
+    var bloqueada = boletaEstaBloqueada();
+    var panelBoleta = document.getElementById('panel-boleta');
+    var cardProductos = document.querySelector('.card-boleta-productos');
+    var avisoProductos = document.getElementById('boleta-productos-bloqueo');
+    if (panelBoleta) panelBoleta.classList.toggle('boleta-guardada-activa', bloqueada);
+    if (cardProductos) cardProductos.classList.toggle('boleta-edicion-bloqueada', bloqueada);
+    if (avisoProductos) avisoProductos.hidden = !bloqueada;
+
+    ['b-cliente', 'b-descuento', 'b-descuento-tipo', 'b-fecha'].forEach(function(id){
+      var el = document.getElementById(id);
+      if (el) el.disabled = bloqueada;
+    });
+    var pagadaEl = document.getElementById('b-pagada');
+    if (pagadaEl) pagadaEl.disabled = bloqueada;
+    var buscadorBoleta = document.getElementById('buscador');
+    if (buscadorBoleta) buscadorBoleta.disabled = bloqueada;
+
+    var btnGuardar = document.getElementById('btn-guardar-historial');
+    if (btnGuardar){
+      btnGuardar.disabled = bloqueada;
+      btnGuardar.title = bloqueada ? 'Esta boleta ya está guardada' : '';
+    }
+
     actualizarEstadoBotonesBoletaAccion();
+    renderListaBoleta();
+    renderResumenBoleta();
   }
 
   function boletaEstaGuardadaSinCambios(){
@@ -309,6 +342,7 @@
     }
     if (btnGuardar){
       btnGuardar.classList.toggle('destacar-guardar', tieneLineas && !puede);
+      btnGuardar.disabled = puede;
     }
     if (grupo){
       grupo.classList.toggle('bloqueada', tieneLineas && !puede);
@@ -329,9 +363,9 @@
     if (puede){
       aviso.className = 'boleta-guardar-aviso ok';
       if (avisoIcon) avisoIcon.textContent = '✅';
-      avisoMsg.textContent = 'Boleta guardada en el historial. Ya podés imprimir o compartir por WhatsApp.';
-      if (estadoEl) estadoEl.textContent = 'Listo';
-      if (hintEl) hintEl.textContent = 'Estas acciones usan la boleta guardada en el historial.';
+      avisoMsg.textContent = 'Boleta guardada. Imprimí, compartí por WhatsApp o empezá otra con «Nueva Boleta».';
+      if (estadoEl) estadoEl.textContent = 'Lista para enviar';
+      if (hintEl) hintEl.textContent = 'No podés modificar esta boleta. Para otra venta usá «Nueva Boleta».';
     } else if (boletaGuardadaActivaId){
       aviso.className = 'boleta-guardar-aviso warn cambios';
       if (avisoIcon) avisoIcon.textContent = '⚠️';
@@ -404,12 +438,23 @@
     limpiarBoletaGuardada();
     document.getElementById('b-descuento').value = 0;
     document.getElementById('b-cliente').value = '';
+    document.getElementById('b-cliente').disabled = false;
+    document.getElementById('b-descuento').disabled = false;
+    document.getElementById('b-descuento-tipo').disabled = false;
+    document.getElementById('b-fecha').disabled = false;
     document.getElementById('b-cliente').classList.remove('field-invalid', 'field-ok');
     document.getElementById('b-cliente-error').className = 'field-hint';
     document.getElementById('b-cliente-error').textContent = '';
     document.getElementById('b-fecha').value = hoyISO();
     var pagadaEl = document.getElementById('b-pagada');
-    if (pagadaEl) pagadaEl.checked = false;
+    if (pagadaEl){
+      pagadaEl.checked = false;
+      pagadaEl.disabled = false;
+    }
+    var btnGuardar = document.getElementById('btn-guardar-historial');
+    if (btnGuardar) btnGuardar.disabled = false;
+    var buscadorBoleta = document.getElementById('buscador');
+    if (buscadorBoleta) buscadorBoleta.disabled = false;
     renderListaBoleta();
     renderResumenBoleta();
 }
@@ -1508,6 +1553,7 @@ return nuevo;
   }
 
   function cambiarCantidad(id, delta){
+    if (boletaEstaBloqueada()) return;
     if (!id || !productos.some(function(p){ return p.id === id; })) return;
     var actual = cantidades[id] || 0;
     var nueva = Math.max(0, actual + delta);
@@ -1520,6 +1566,7 @@ return nuevo;
   window.cambiarCantidad = cambiarCantidad;
 
   window.setCantidad = function(id, valor){
+    if (boletaEstaBloqueada()) return;
     if (!id || !productos.some(function(p){ return p.id === id; })) return;
     var n = parseInt(valor, 10);
     if (isNaN(n) || n < 0) n = 0;
@@ -1580,6 +1627,7 @@ return nuevo;
   }
 
   window.setFiltroCategoriaBoleta = function(catId){
+    if (boletaEstaBloqueada()) return;
     categoriaFiltro = catId;
     renderFiltrosCategoriaBoleta();
     renderListaBoleta();
@@ -1647,6 +1695,7 @@ return nuevo;
 
   /* ===================== boleta: ítems sueltos (no catálogo) ===================== */
   window.quitarManual = function(id){
+    if (boletaEstaBloqueada()) return;
     itemsManuales = itemsManuales.filter(function(x){ return x.id !== id; });
     renderResumenBoleta();
   };
@@ -1684,14 +1733,15 @@ return nuevo;
   function renderResumenBoleta(){
     var calc = calcularBoleta();
     var cont = document.getElementById('receipt-items');
+    var bloqueada = boletaEstaBloqueada();
 
     if (calc.lineas.length === 0){
       cont.innerHTML = '<div class="receipt-empty">Todavía no agregaste productos a esta boleta.</div>';
     } else {
       cont.innerHTML = calc.lineas.map(function(l){
-        var quitarBtn = l.manual
+        var quitarBtn = bloqueada ? '' : (l.manual
           ? '<button type="button" class="quitar" title="Quitar" data-action="quitar-manual" data-id="' + escapeHtml(l.id) + '">✕</button>'
-          : '<button type="button" class="quitar" title="Quitar" data-action="quitar-producto" data-id="' + escapeHtml(l.id) + '" data-cant="' + l.cantidad + '">✕</button>';
+          : '<button type="button" class="quitar" title="Quitar" data-action="quitar-producto" data-id="' + escapeHtml(l.id) + '" data-cant="' + l.cantidad + '">✕</button>');
         return '<div class="receipt-line">' +
           '<span class="nombre" title="' + escapeHtml(l.nombre) + '">' + escapeHtml(l.nombre) + '</span>' +
           '<span class="cant">' + l.cantidad + '</span>' +
@@ -1711,7 +1761,9 @@ return nuevo;
   window.renderProductos = renderProductos;
 
   window.nuevaBoleta = function(){
-    if (!resolverBoletaPendienteAntesDeReemplazar(
+    if (boletaEstaBloqueada()){
+      // Boleta ya guardada: pasar a la siguiente sin preguntar
+    } else if (!resolverBoletaPendienteAntesDeReemplazar(
       boletaReeditandoId
         ? '¿Guardar los cambios de esta boleta antes de empezar una nueva?'
         : '¿Guardar esta boleta en el historial antes de empezar una nueva?',
@@ -1719,13 +1771,14 @@ return nuevo;
         ? '¿Empezar una boleta nueva sin guardar los cambios? Se perderá la edición.'
         : '¿Empezar una boleta nueva sin guardar? Se perderá la boleta actual.'
     )) return;
-    if (!hayBoletaPendiente() && !boletaReeditandoId){
+    if (!hayBoletaPendiente() && !boletaReeditandoId && !boletaEstaBloqueada()){
       mostrarAviso('Boleta nueva lista 🧾');
       return;
     }
     var eraReedicion = !!boletaReeditandoId;
+    var yaGuardadaBloqueada = boletaEstaBloqueada();
     ocultarBannerBoletaReeditando();
-    if (!eraReedicion) contadorBoleta += 1;
+    if (!eraReedicion && !yaGuardadaBloqueada) contadorBoleta += 1;
     actualizarNumeroBoleta();
     limpiarBoletaActual();
     persistirLocalStorage();
@@ -1896,11 +1949,11 @@ return nuevo;
         renderClientes();
         if (!opciones.silencioso){
           if (eraNuevo){
-            mostrarAviso('Boleta N° ' + (actualizado.numero || '—') + ' actualizada · «' + cliente + '» agregado a clientes ✅');
+            mostrarAviso('Boleta N° ' + (actualizado.numero || '—') + ' actualizada ✅');
           } else if (boletaEstaPagada(actualizado)){
             mostrarAviso('Boleta N° ' + (actualizado.numero || '—') + ' actualizada y archivada ✅');
           } else {
-            mostrarAviso('Boleta N° ' + (actualizado.numero || '—') + ' actualizada ✅');
+            mostrarAviso('Boleta N° ' + (actualizado.numero || '—') + ' guardada ✅ · Imprimí, compartí o Nueva Boleta');
           }
         }
         return true;
@@ -1934,11 +1987,11 @@ return nuevo;
     renderClientes();
     if (!opciones.silencioso){
       if (eraNuevo){
-        mostrarAviso('Boleta guardada · «' + cliente + '» agregado a clientes ✅');
+        mostrarAviso('Boleta guardada · «' + cliente + '» agregado a clientes ✅ · Imprimí, compartí o Nueva Boleta');
       } else if (boletaEstaPagada(registro)){
         mostrarAviso('Boleta guardada como pagada y archivada ✅');
       } else {
-        mostrarAviso('Boleta guardada · siguiente N° ' + String(contadorBoleta).padStart(4, '0'));
+        mostrarAviso('Boleta guardada ✅ · Imprimí, compartí o empezá otra con «Nueva Boleta»');
       }
     }
     return true;
