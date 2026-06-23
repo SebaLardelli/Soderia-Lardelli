@@ -922,17 +922,17 @@ return nuevo;
             : '<div class="cliente-saldo al-dia">Al día</div>';
           return '<div class="cliente-item-wrap">' +
             '<div class="cat-item cliente-item">' +
-            '<div class="cliente-item-main">' +
+            '<div class="cliente-item-head">' +
               '<span class="nombre">' + escapeHtml(c.nombre) + '</span>' +
-              notasHtml +
-              saldoHtml +
+              '<span class="acciones">' +
+                '<button type="button" class="btn-icon" title="Agregar nota" data-action="agregar-nota-cliente" data-id="' + escapeHtml(c.id) + '">📝</button>' +
+                '<button type="button" class="btn-icon" title="Historial de compras" data-action="ver-cliente" data-id="' + escapeHtml(c.id) + '">📋</button>' +
+                '<button type="button" class="btn-icon" title="Editar nombre" data-action="editar-cliente" data-id="' + escapeHtml(c.id) + '">✏️</button>' +
+                '<button type="button" class="btn-icon danger" title="Eliminar" data-action="eliminar-cliente" data-id="' + escapeHtml(c.id) + '">🗑️</button>' +
+              '</span>' +
             '</div>' +
-            '<span class="acciones">' +
-              '<button type="button" class="btn-icon" title="Agregar nota" data-action="agregar-nota-cliente" data-id="' + escapeHtml(c.id) + '">📝</button>' +
-              '<button type="button" class="btn-icon" title="Historial de compras" data-action="ver-cliente" data-id="' + escapeHtml(c.id) + '">📋</button>' +
-              '<button type="button" class="btn-icon" title="Editar nombre" data-action="editar-cliente" data-id="' + escapeHtml(c.id) + '">✏️</button>' +
-              '<button type="button" class="btn-icon danger" title="Eliminar" data-action="eliminar-cliente" data-id="' + escapeHtml(c.id) + '">🗑️</button>' +
-            '</span>' +
+            notasHtml +
+            saldoHtml +
           '</div>' +
           (clienteNotaAbiertoId === c.id ? htmlFormNotaCliente(c) : '') +
           '</div>';
