@@ -328,7 +328,19 @@
   }
   .clientes-cobranza-resumen strong{ color:var(--ink); }
 
+  .cliente-item-wrap{ display:flex; flex-direction:column; gap:8px; }
   .cliente-item{ align-items:flex-start !important; }
+  .cliente-notas-titulo{ margin:0 0 6px; font-size:13px; font-weight:700; color:var(--ink); }
+  .cliente-nota-form{
+    display:flex; flex-direction:column; gap:8px; padding:10px 12px;
+    border:1px dashed var(--gold); border-radius:var(--radius); background:#fffdf8;
+  }
+  .cliente-nota-input{
+    width:100%; padding:9px 10px; border:1.5px solid var(--line); border-radius:8px;
+    background:#fff; color:var(--ink); font-size:13px;
+  }
+  .cliente-nota-form-acciones{ display:flex; gap:8px; flex-wrap:wrap; }
+  .cliente-nota-form-acciones .btn{ flex:1; min-width:100px; }
   .cliente-item-main{ flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; }
   .cliente-nota-preview{
     font-size:11.5px; color:var(--muted); line-height:1.35;

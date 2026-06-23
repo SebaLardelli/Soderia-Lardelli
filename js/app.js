@@ -91,6 +91,7 @@
 
   var historialDetalleAbiertoId = null;
   var clienteDetalleAbiertoId = null;
+  var clienteNotaAbiertoId = null;
   var pinResolver = null;
 
   window.validarClienteBoleta = function(mostrarError){
@@ -314,22 +315,58 @@
     }).join('') + '</div>';
   }
 
-  window.agregarNotaCliente = function(id){
+  function htmlFormNotaCliente(c, inputId){
+    inputId = inputId || ('cliente-nota-input-' + c.id);
+    return '<div class="cliente-nota-form">' +
+      '<input type="text" id="' + inputId + '" class="cliente-nota-input" placeholder="Ej: paga los viernes, deja bidones en el portón" maxlength="200">' +
+      '<div class="cliente-nota-form-acciones">' +
+        '<button type="button" class="btn btn-primary btn-sm" data-action="guardar-nota-cliente" data-id="' + escapeHtml(c.id) + '" data-input-id="' + inputId + '">Agregar</button>' +
+        '<button type="button" class="btn btn-ghost btn-sm" data-action="cancelar-nota-cliente">Cancelar</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  window.abrirFormNotaCliente = function(id){
+    clienteNotaAbiertoId = id;
+    renderClientes();
+    if (clienteDetalleAbiertoId === id) verDetalleCliente(id);
+    setTimeout(function(){
+      var input = document.getElementById('cliente-nota-input-' + id) || document.getElementById('cliente-nota-input-detalle');
+      if (input) input.focus();
+    }, 30);
+  };
+
+  window.cancelarFormNotaCliente = function(){
+    clienteNotaAbiertoId = null;
+    renderClientes();
+    if (clienteDetalleAbiertoId) verDetalleCliente(clienteDetalleAbiertoId);
+  };
+
+  window.guardarNotaClienteDesdeForm = function(id, inputId){
     var c = clientePorId(id);
     if (!c) return;
-    var texto = prompt('Nota / recordatorio para «' + c.nombre + '»:');
-    if (texto === null) return;
-    texto = texto.trim();
+    var input = document.getElementById(inputId || ('cliente-nota-input-' + id));
+    if (!input){
+      mostrarAviso('No se encontró el campo de la nota');
+      return;
+    }
+    var texto = (input.value || '').trim();
     if (!texto){
-      mostrarAviso('La nota no puede estar vacía');
+      mostrarAviso('Escribí la nota antes de agregar');
+      input.focus();
       return;
     }
     if (!Array.isArray(c.recordatorios)) c.recordatorios = [];
     c.recordatorios.push({ id: uid(), texto: texto, creadoEn: new Date().toISOString() });
+    clienteNotaAbiertoId = null;
     persistirLocalStorage();
     renderClientes();
     if (clienteDetalleAbiertoId === id) verDetalleCliente(id);
     mostrarAviso('Nota agregada ✅');
+  };
+
+  window.agregarNotaCliente = function(id){
+    abrirFormNotaCliente(id);
   };
 
   window.eliminarNotaCliente = function(clienteId, notaId){
@@ -339,6 +376,7 @@
     persistirLocalStorage();
     renderClientes();
     if (clienteDetalleAbiertoId === clienteId) verDetalleCliente(clienteId);
+    mostrarAviso('Nota eliminada');
   };
 
   function montoPagadoBoleta(h){
@@ -874,7 +912,8 @@ return nuevo;
           var saldoHtml = saldo > 0.004
             ? '<div class="cliente-saldo deuda">Debe ' + money(saldo) + '</div>'
             : '<div class="cliente-saldo al-dia">Al día</div>';
-          return '<div class="cat-item cliente-item">' +
+          return '<div class="cliente-item-wrap">' +
+            '<div class="cat-item cliente-item">' +
             '<div class="cliente-item-main">' +
               '<span class="nombre">' + escapeHtml(c.nombre) + '</span>' +
               notasHtml +
@@ -886,6 +925,8 @@ return nuevo;
               '<button type="button" class="btn-icon" title="Editar nombre" data-action="editar-cliente" data-id="' + escapeHtml(c.id) + '">✏️</button>' +
               '<button type="button" class="btn-icon danger" title="Eliminar" data-action="eliminar-cliente" data-id="' + escapeHtml(c.id) + '">🗑️</button>' +
             '</span>' +
+          '</div>' +
+          (clienteNotaAbiertoId === c.id ? htmlFormNotaCliente(c) : '') +
           '</div>';
         }).join('') + '</div>';
       }
@@ -924,8 +965,9 @@ return nuevo;
       '<div class="cliente-detalle-head">' +
         '<h3>' + escapeHtml(c.nombre) + '</h3>' +
         '<div class="cliente-detalle-notas-wrap">' +
+          '<h4 class="cliente-notas-titulo">Notas / recordatorios</h4>' +
           (sinNotas ? '<p class="cliente-detalle-notas muted">Sin notas todavía.</p>' : notasHtml) +
-          '<button type="button" class="btn btn-ghost btn-sm" data-action="agregar-nota-cliente" data-id="' + escapeHtml(c.id) + '">📝 Agregar nota</button>' +
+          htmlFormNotaCliente(c, 'cliente-nota-input-detalle') +
         '</div>' +
       '</div>' +
       '<div class="cliente-detalle-stats">' +
@@ -2149,6 +2191,24 @@ return nuevo;
     if (buscadorCatalogo) buscadorCatalogo.addEventListener('input', renderProductos);
     if (buscadorHistorial) buscadorHistorial.addEventListener('input', renderHistorial);
 
+    document.body.addEventListener('keydown', function(ev){
+      if (ev.key !== 'Enter') return;
+      var guardarBtn = ev.target.closest('[data-action="guardar-nota-cliente"]');
+      if (guardarBtn){
+        ev.preventDefault();
+        guardarNotaClienteDesdeForm(guardarBtn.getAttribute('data-id') || '', guardarBtn.getAttribute('data-input-id') || '');
+        return;
+      }
+      if (ev.target.classList && ev.target.classList.contains('cliente-nota-input')){
+        var form = ev.target.closest('.cliente-nota-form');
+        if (!form) return;
+        var btn = form.querySelector('[data-action="guardar-nota-cliente"]');
+        if (!btn) return;
+        ev.preventDefault();
+        guardarNotaClienteDesdeForm(btn.getAttribute('data-id') || '', btn.getAttribute('data-input-id') || '');
+      }
+    });
+
     var bNegocio = document.getElementById('b-negocio');
     var bCliente = document.getElementById('b-cliente');
     var bDescuento = document.getElementById('b-descuento');
@@ -2205,7 +2265,9 @@ return nuevo;
         case 'editar-cliente': editarCliente(id); break;
         case 'eliminar-cliente': eliminarCliente(id); break;
         case 'ver-cliente': verDetalleCliente(id); break;
-        case 'agregar-nota-cliente': agregarNotaCliente(id); break;
+        case 'agregar-nota-cliente': abrirFormNotaCliente(id); break;
+        case 'guardar-nota-cliente': guardarNotaClienteDesdeForm(id, btn.getAttribute('data-input-id') || ''); break;
+        case 'cancelar-nota-cliente': cancelarFormNotaCliente(); break;
         case 'eliminar-nota-cliente': eliminarNotaCliente(id, btn.getAttribute('data-nota-id') || ''); break;
         case 'registrar-abono': {
           var inputAbono = document.getElementById('historial-abono-input');
