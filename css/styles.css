@@ -792,6 +792,60 @@
   .receipt-meta .field-hint.info{ color:var(--muted); }
   .receipt-meta input.field-ok{ border-bottom-color:var(--success); }
 
+  .receipt-meta .boleta-cliente-combo{
+    position:relative; flex:1; min-width:0;
+    display:flex; align-items:center; gap:2px;
+    border-bottom:1.5px solid var(--line);
+  }
+  .receipt-meta .boleta-cliente-combo:focus-within{
+    border-bottom-color:var(--ink-soft);
+    box-shadow:0 2px 0 rgba(18,48,82,.08);
+  }
+  .receipt-meta .boleta-cliente-combo input{
+    flex:1; min-width:0; border:none !important; border-bottom:none !important;
+    box-shadow:none !important; padding-right:0;
+  }
+  .receipt-meta .boleta-cliente-combo input:focus{ box-shadow:none !important; }
+  .receipt-meta .boleta-cliente-combo input.field-ok{ border-bottom:none !important; }
+  .receipt-meta .boleta-cliente-combo input.field-invalid{ border-bottom:none !important; }
+  .boleta-cliente-toggle{
+    flex:0 0 24px; width:24px; height:24px;
+    border:none; background:transparent; color:var(--muted);
+    font-size:14px; line-height:1; cursor:pointer; border-radius:4px;
+    display:flex; align-items:center; justify-content:center;
+    transition:color .12s ease, background .12s ease, transform .15s ease;
+  }
+  .boleta-cliente-toggle:hover:not(:disabled){ color:var(--ink); background:var(--paper); }
+  .boleta-cliente-toggle:disabled{ opacity:.4; cursor:not-allowed; }
+  .boleta-cliente-toggle.abierto{ transform:rotate(180deg); color:var(--ink); }
+  .boleta-clientes-lista{
+    position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:50;
+    max-height:min(40vh, 200px); overflow-y:auto; -webkit-overflow-scrolling:touch;
+    background:#fff; border:1px solid var(--line); border-radius:8px;
+    box-shadow:var(--shadow-lift);
+  }
+  .boleta-cliente-opcion{
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    width:100%; padding:7px 10px; border:none; border-bottom:1px solid var(--line-soft);
+    background:#fff; text-align:left; font-family:var(--font-body);
+    font-size:12.5px; color:var(--ink); cursor:pointer;
+  }
+  .boleta-cliente-opcion:last-child{ border-bottom:none; }
+  .boleta-cliente-opcion:hover,
+  .boleta-cliente-opcion:focus-visible{ background:var(--accent-soft); outline:none; }
+  .boleta-cliente-nombre{
+    flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    font-weight:600;
+  }
+  .boleta-cliente-saldo{
+    flex:0 0 auto; font-family:var(--font-mono); font-size:10px; font-weight:600;
+  }
+  .boleta-cliente-saldo.deuda{ color:#b45309; }
+  .boleta-cliente-saldo.al-dia{ color:#1f7a3f; }
+  .boleta-clientes-vacio{
+    padding:10px; font-size:12px; color:var(--muted); text-align:center; line-height:1.35;
+  }
+
   .dashed{ border-top:1.5px dashed var(--line); margin:12px 0; }
 
   .receipt-cols{

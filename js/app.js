@@ -270,6 +270,9 @@
       var el = document.getElementById(id);
       if (el) el.disabled = bloqueada;
     });
+    var btnToggleClientes = document.getElementById('btn-toggle-clientes-boleta');
+    if (btnToggleClientes) btnToggleClientes.disabled = bloqueada;
+    if (bloqueada) cerrarListaClientesBoleta();
     var pagadaEl = document.getElementById('b-pagada');
     if (pagadaEl) pagadaEl.disabled = bloqueada;
     var buscadorBoleta = document.getElementById('buscador');
@@ -442,6 +445,7 @@
     if (btnGuardar) btnGuardar.disabled = false;
     var buscadorBoleta = document.getElementById('buscador');
     if (buscadorBoleta) buscadorBoleta.disabled = false;
+    cerrarListaClientesBoleta();
     renderListaBoleta();
     renderResumenBoleta();
 }
@@ -1316,6 +1320,7 @@ return nuevo;
       }
     }
     renderClientesDatalist();
+    if (listaClientesBoletaEstaAbierta()) renderListaClientesBoleta();
   }
 
   window.verDetalleCliente = function(id){
@@ -1372,12 +1377,78 @@ return nuevo;
   };
 
   function renderClientesDatalist(){
-    var dl = document.getElementById('clientes-datalist');
-    if (!dl) return;
-    dl.innerHTML = clientes.map(function(c){
-      return '<option value="' + escapeHtml(c.nombre) + '"></option>';
+    /* datalist removido: la boleta usa el desplegable con flecha */
+  }
+
+  function clientesFiltradosBoleta(query){
+    query = (query || '').toLowerCase().trim();
+    return clientes.slice().sort(function(a, b){
+      return a.nombre.localeCompare(b.nombre, 'es');
+    }).filter(function(c){
+      if (!query) return true;
+      return c.nombre.toLowerCase().indexOf(query) !== -1;
+    });
+  }
+
+  function renderListaClientesBoleta(){
+    var lista = document.getElementById('boleta-clientes-lista');
+    var input = document.getElementById('b-cliente');
+    if (!lista) return;
+    var filtrados = clientesFiltradosBoleta(input ? input.value : '');
+    if (filtrados.length === 0){
+      lista.innerHTML = '<div class="boleta-clientes-vacio">No hay clientes' +
+        ((input && input.value.trim()) ? ' que coincidan con la búsqueda' : ' cargados') + '.</div>';
+      return;
+    }
+    lista.innerHTML = filtrados.map(function(c){
+      var saldo = saldoClientePorNombre(c.nombre);
+      var saldoHtml = saldo > 0.004
+        ? '<span class="boleta-cliente-saldo deuda">' + money(saldo) + '</span>'
+        : '<span class="boleta-cliente-saldo al-dia">Al día</span>';
+      return '<button type="button" class="boleta-cliente-opcion" role="option" data-action="elegir-cliente-boleta" data-nombre="' + escapeHtml(c.nombre) + '">' +
+        '<span class="boleta-cliente-nombre">' + escapeHtml(c.nombre) + '</span>' +
+        saldoHtml +
+      '</button>';
     }).join('');
   }
+
+  function listaClientesBoletaEstaAbierta(){
+    var lista = document.getElementById('boleta-clientes-lista');
+    return !!(lista && lista.classList.contains('show'));
+  }
+
+  function toggleListaClientesBoleta(forceOpen){
+    if (boletaEstaBloqueada()) return;
+    var lista = document.getElementById('boleta-clientes-lista');
+    var btn = document.getElementById('btn-toggle-clientes-boleta');
+    if (!lista || !btn) return;
+    var abrir = typeof forceOpen === 'boolean' ? forceOpen : !lista.classList.contains('show');
+    if (abrir){
+      renderListaClientesBoleta();
+      lista.hidden = false;
+      lista.classList.add('show');
+      btn.classList.add('abierto');
+      btn.setAttribute('aria-expanded', 'true');
+    } else {
+      lista.hidden = true;
+      lista.classList.remove('show');
+      btn.classList.remove('abierto');
+      btn.setAttribute('aria-expanded', 'false');
+    }
+  }
+
+  function cerrarListaClientesBoleta(){
+    toggleListaClientesBoleta(false);
+  }
+
+  window.elegirClienteBoleta = function(nombre){
+    var input = document.getElementById('b-cliente');
+    if (!input) return;
+    input.value = nombre;
+    normalizarClienteBoleta();
+    actualizarEstadoBotonesBoletaAccion();
+    cerrarListaClientesBoleta();
+  };
 
 
   window.guardarProducto = function(ev){
@@ -2771,6 +2842,7 @@ return nuevo;
       bCliente.addEventListener('input', function(){
         validarClienteBoleta(false);
         actualizarEstadoBotonesBoletaAccion();
+        if (listaClientesBoletaEstaAbierta()) renderListaClientesBoleta();
       });
       bCliente.addEventListener('change', function(){
         normalizarClienteBoleta();
@@ -2778,6 +2850,29 @@ return nuevo;
       });
       bCliente.addEventListener('blur', normalizarClienteBoleta);
     }
+    var btnToggleClientesBoleta = document.getElementById('btn-toggle-clientes-boleta');
+    if (btnToggleClientesBoleta){
+      btnToggleClientesBoleta.addEventListener('click', function(ev){
+        ev.preventDefault();
+        ev.stopPropagation();
+        toggleListaClientesBoleta();
+        if (listaClientesBoletaEstaAbierta()){
+          var input = document.getElementById('b-cliente');
+          if (input) input.focus();
+        }
+      });
+    }
+    var listaClientesBoleta = document.getElementById('boleta-clientes-lista');
+    if (listaClientesBoleta){
+      listaClientesBoleta.addEventListener('mousedown', function(ev){
+        if (ev.target.closest('.boleta-cliente-opcion')) ev.preventDefault();
+      });
+    }
+    document.addEventListener('click', function(ev){
+      var combo = document.getElementById('boleta-cliente-combo');
+      if (!combo || combo.contains(ev.target)) return;
+      cerrarListaClientesBoleta();
+    });
     if (bDescuento) bDescuento.addEventListener('input', renderResumenBoleta);
     if (bDescuentoTipo) bDescuentoTipo.addEventListener('change', renderResumenBoleta);
     var bPagada = document.getElementById('b-pagada');
@@ -2852,6 +2947,7 @@ return nuevo;
         case 'ver-historial': verDetalleHistorial(id); break;
         case 'wpp-historial': compartirDesdeHistorial(id); break;
         case 'eliminar-historial': eliminarDeHistorial(id); break;
+        case 'elegir-cliente-boleta': elegirClienteBoleta(btn.getAttribute('data-nombre') || ''); break;
       }
     });
 

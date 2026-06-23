@@ -169,7 +169,14 @@
               <div class="receipt-meta">
                 <div class="row"><label for="b-numero">N°</label><input id="b-numero" type="text" class="mono" readonly tabindex="-1" aria-readonly="true" title="Se asigna automáticamente"></div>
                 <div class="row"><label for="b-fecha">Fecha</label><input id="b-fecha" type="date"></div>
-                <div class="row"><label for="b-cliente">Cliente<span class="req" aria-hidden="true">*</span></label><input id="b-cliente" type="text" list="clientes-datalist" placeholder="Elegí o escribí un cliente" required><datalist id="clientes-datalist"></datalist></div>
+                <div class="row row-cliente">
+                  <label for="b-cliente">Cliente<span class="req" aria-hidden="true">*</span></label>
+                  <div class="boleta-cliente-combo" id="boleta-cliente-combo">
+                    <input id="b-cliente" type="text" placeholder="Elegí o escribí un cliente" required autocomplete="off">
+                    <button type="button" class="boleta-cliente-toggle" id="btn-toggle-clientes-boleta" aria-label="Ver listado de clientes" aria-expanded="false" aria-controls="boleta-clientes-lista" tabindex="-1">▾</button>
+                    <div class="boleta-clientes-lista" id="boleta-clientes-lista" role="listbox" aria-label="Clientes" hidden></div>
+                  </div>
+                </div>
                 <div class="field-hint" id="b-cliente-error"></div>
               </div>
 
