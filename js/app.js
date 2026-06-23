@@ -514,47 +514,64 @@
     sincronizarEstadoPagoBoleta(h);
   }
 
-  function lineaHistorialEsProducto(linea, productoId, nombreAnterior){
-    if (!linea || linea.manual) return false;
-    if (linea.id && String(linea.id) === String(productoId)) return true;
-    return !linea.id && nombreAnterior && linea.nombre === nombreAnterior;
+  function productoDeLineaHistorial(linea){
+    if (!linea || linea.manual) return null;
+    if (linea.id){
+      var porId = productos.find(function(p){ return String(p.id) === String(linea.id); });
+      if (porId) return porId;
+    }
+    return productos.find(function(p){ return p.nombre === linea.nombre; }) || null;
   }
 
-  function actualizarBoletasPendientesPorProducto(producto, opts){
-    opts = opts || {};
-    if (!producto) return { boletas: 0, lineas: 0 };
-    var productoId = String(producto.id);
-    var nombreAnterior = opts.nombreAnterior || producto.nombre;
-    var precioAnterior = opts.precioAnterior;
+  function actualizarPreciosBoletaHistorial(h){
+    if (!h || boletaEstaPagada(h)) return { actualizada: false, lineas: 0 };
     var lineasActualizadas = 0;
-    var boletasAfectadas = 0;
+    var tocada = false;
 
-    historial.forEach(function(h){
-      if (boletaEstaPagada(h)) return;
-      var tocada = false;
-      (h.lineas || []).forEach(function(l){
-        if (!lineaHistorialEsProducto(l, productoId, nombreAnterior)) return;
-        if (!l.id) l.id = producto.id;
-        if (l.nombre !== producto.nombre) l.nombre = producto.nombre;
-        if (precioAnterior === undefined || l.precio !== producto.precio){
-          if (l.precio !== producto.precio){
-            l.precio = producto.precio;
-            lineasActualizadas++;
-          }
-          tocada = true;
-        } else if (opts.nombreAnterior && opts.nombreAnterior !== producto.nombre){
-          tocada = true;
-        }
-      });
-      if (tocada){
-        recalcularTotalesBoletaHistorial(h);
-        ajustarPagosBoletaTrasCambioTotal(h);
-        boletasAfectadas++;
+    (h.lineas || []).forEach(function(l){
+      var prod = productoDeLineaHistorial(l);
+      if (!prod) return;
+      var cambio = false;
+      if (!l.id){ l.id = prod.id; cambio = true; }
+      if (l.nombre !== prod.nombre){ l.nombre = prod.nombre; cambio = true; }
+      if (l.precio !== prod.precio){
+        l.precio = prod.precio;
+        lineasActualizadas++;
+        cambio = true;
       }
+      if (cambio) tocada = true;
     });
 
-    return { boletas: boletasAfectadas, lineas: lineasActualizadas };
+    if (!tocada) return { actualizada: false, lineas: 0 };
+
+    recalcularTotalesBoletaHistorial(h);
+    ajustarPagosBoletaTrasCambioTotal(h);
+    return { actualizada: true, lineas: lineasActualizadas };
   }
+
+  window.actualizarPreciosBoleta = function(id){
+    var h = buscarEnHistorial(id);
+    if (!h) return;
+    if (boletaEstaPagada(h)){
+      mostrarAviso('Solo se pueden actualizar precios en boletas pendientes');
+      return;
+    }
+    var etiqueta = 'N°' + (h.numero || '—') + (h.cliente ? (' · ' + h.cliente) : '');
+    if (!confirm(
+      '¿Actualizar los precios del catálogo en la boleta ' + etiqueta + '?\n\n' +
+      'Solo cambian productos del catálogo (no ítems manuales). Los abonos ya hechos se mantienen y se recalcula el saldo.'
+    )) return;
+
+    var res = actualizarPreciosBoletaHistorial(h);
+    if (!res.actualizada){
+      mostrarAviso('Esta boleta ya tenía los precios actuales del catálogo');
+      return;
+    }
+
+    persistirLocalStorage();
+    refrescarVistasTrasCambioHistorial();
+    mostrarAviso('Precios actualizados en la boleta ' + (h.numero || '—') + ' ✅');
+  };
 
   function refrescarVistasTrasCambioHistorial(){
     actualizarStatHistorial();
@@ -1153,35 +1170,21 @@ return nuevo;
     if (!nombre){ errorEl.textContent = 'Poné un nombre para el producto.'; return false; }
     if (isNaN(precio) || precio < 0){ errorEl.textContent = 'El precio tiene que ser un número mayor o igual a 0.'; return false; }
 
-    var avisoTexto = '';
-    var refrescarHistorialPendiente = false;
-
     if (editandoId){
       var existente = productos.find(function(p){ return p.id === editandoId; });
       if (existente){
         var codigo = document.getElementById('p-codigo').value.trim();
-        var nombreAnterior = existente.nombre;
-        var precioAnterior = existente.precio;
         existente.nombre = nombre;
         existente.precio = precio;
         existente.codigo = codigo;
         existente.categoriaId = categoriaId;
-        var syncHistorial = actualizarBoletasPendientesPorProducto(existente, {
-          nombreAnterior: nombreAnterior,
-          precioAnterior: precioAnterior
-        });
-        refrescarHistorialPendiente = syncHistorial.boletas > 0;
-        avisoTexto = refrescarHistorialPendiente
-          ? ('Producto actualizado ✅ · ' + syncHistorial.boletas + (syncHistorial.boletas === 1 ? ' boleta pendiente' : ' boletas pendientes') + ' con nuevo precio')
-          : 'Producto actualizado ✅';
-      } else {
-        avisoTexto = 'Producto actualizado ✅';
       }
       cancelarEdicion();
+      mostrarAviso('Producto actualizado ✅');
     } else {
       var nuevoId = nuevoIdProducto();
       productos.push({ id: nuevoId, nombre: nombre, precio: precio, codigo: nuevoId, categoriaId: categoriaId });
-      avisoTexto = 'Producto agregado ✅ · N° ' + nuevoId;
+      mostrarAviso('Producto agregado ✅ · N° ' + nuevoId);
     }
 
     document.getElementById('form-producto').reset();
@@ -1191,8 +1194,6 @@ return nuevo;
     renderCategorias();
     renderFiltrosCategoriaBoleta();
     renderListaBoleta();
-    if (refrescarHistorialPendiente) refrescarVistasTrasCambioHistorial();
-    mostrarAviso(avisoTexto);
     return false;
   };
 
@@ -1796,7 +1797,8 @@ return nuevo;
       '</div>' +
       '<div class="monto mono">' + montoHtml + '</div>' +
       '<div class="acciones">' +
-        '<button type="button" class="btn-icon" title="Pago parcial" data-action="pago-parcial-historial" data-id="' + escapeHtml(h.id) + '">💵</button>' +
+        (pagada ? '' : '<button type="button" class="btn-icon" title="Actualizar precios del catálogo" data-action="actualizar-precios-boleta" data-id="' + escapeHtml(h.id) + '">💲</button>') +
+        (pagada ? '' : '<button type="button" class="btn-icon" title="Pago parcial" data-action="pago-parcial-historial" data-id="' + escapeHtml(h.id) + '">💵</button>') +
         '<button type="button" class="btn-icon" title="Ver boleta" data-action="ver-historial" data-id="' + escapeHtml(h.id) + '">👁️</button>' +
         '<button type="button" class="btn-icon" title="Compartir por WhatsApp" data-action="wpp-historial" data-id="' + escapeHtml(h.id) + '">💬</button>' +
         '<button type="button" class="btn-icon danger" title="Eliminar" data-action="eliminar-historial" data-id="' + escapeHtml(h.id) + '">🗑️</button>' +
@@ -2159,6 +2161,10 @@ return nuevo;
 
     document.getElementById('historial-detalle-body').innerHTML = html;
     historialDetalleAbiertoId = id;
+    var btnActualizarPreciosDetalle = document.getElementById('historial-detalle-actualizar-precios-btn');
+    if (btnActualizarPreciosDetalle){
+      btnActualizarPreciosDetalle.style.display = boletaEstaPagada(h) ? 'none' : '';
+    }
     document.getElementById('historial-overlay').classList.add('show');
   };
 
@@ -2381,6 +2387,7 @@ return nuevo;
     var btnWppDetalle = document.getElementById('historial-detalle-wpp-btn');
     var btnReabrirDetalle = document.getElementById('historial-detalle-reabrir-btn');
     var btnEliminarDetalle = document.getElementById('historial-detalle-eliminar-btn');
+    var btnActualizarPreciosDetalle = document.getElementById('historial-detalle-actualizar-precios-btn');
     if (btnWppDetalle){
       btnWppDetalle.addEventListener('click', function(){
         if (historialDetalleAbiertoId) compartirDesdeHistorial(historialDetalleAbiertoId);
@@ -2396,6 +2403,11 @@ return nuevo;
         if (!historialDetalleAbiertoId) return;
         eliminarDeHistorial(historialDetalleAbiertoId);
         cerrarDetalleHistorial();
+      });
+    }
+    if (btnActualizarPreciosDetalle){
+      btnActualizarPreciosDetalle.addEventListener('click', function(){
+        if (historialDetalleAbiertoId) actualizarPreciosBoleta(historialDetalleAbiertoId);
       });
     }
 
@@ -2497,6 +2509,7 @@ return nuevo;
           break;
         }
         case 'pago-parcial-historial': verDetalleHistorial(id); break;
+        case 'actualizar-precios-boleta': actualizarPreciosBoleta(id); break;
         case 'editar-producto': editarProducto(id); break;
         case 'eliminar-producto': eliminarProducto(id); break;
         case 'filtro-categoria': setFiltroCategoriaBoleta(btn.getAttribute('data-cat') || ''); break;
