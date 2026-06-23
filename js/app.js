@@ -1304,15 +1304,17 @@ return nuevo;
           return '<div class="cliente-item-wrap">' +
             '<div class="cat-item cliente-item">' +
               '<span class="cliente-nombre-cell">' +
-                '<span class="nombre">' + escapeHtml(c.nombre) + '</span>' +
+                '<span class="nombre" title="' + escapeHtml(c.nombre) + '">' + escapeHtml(c.nombre) + '</span>' +
                 indicadorNotasCliente(c) +
               '</span>' +
-              saldoHtml +
-              '<span class="acciones">' +
+              '<span class="cliente-item-derecha">' +
+                saldoHtml +
+                '<span class="acciones">' +
                 '<button type="button" class="btn-icon" title="Agregar nota" data-action="agregar-nota-cliente" data-id="' + escapeHtml(c.id) + '">📝</button>' +
                 '<button type="button" class="btn-icon" title="Historial de compras" data-action="ver-cliente" data-id="' + escapeHtml(c.id) + '">📋</button>' +
                 '<button type="button" class="btn-icon" title="Editar nombre" data-action="editar-cliente" data-id="' + escapeHtml(c.id) + '">✏️</button>' +
                 '<button type="button" class="btn-icon danger" title="Eliminar" data-action="eliminar-cliente" data-id="' + escapeHtml(c.id) + '">🗑️</button>' +
+              '</span>' +
               '</span>' +
             '</div>' +
           (clienteNotaAbiertoId === c.id ? htmlFormNotaCliente(c) : '') +

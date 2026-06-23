@@ -385,21 +385,30 @@
   }
   .cliente-item{
     display:grid;
-    grid-template-columns:minmax(0, 1fr) minmax(52px, 72px) auto;
+    grid-template-columns:minmax(0, 1fr) auto;
     align-items:center;
     gap:6px 8px;
   }
   .cliente-item .cliente-nombre-cell{
-    display:flex; align-items:center; gap:6px;
-    min-width:0; overflow:hidden;
+    display:flex; align-items:flex-start; gap:4px;
+    min-width:0;
     grid-column:1;
   }
+  .cliente-item .nombre{
+    flex:1; min-width:0;
+    white-space:normal; word-break:break-word; overflow:visible;
+    text-overflow:clip; line-height:1.25;
+  }
   .cliente-nota-pin{
-    flex:0 0 auto; font-size:12px; line-height:1; opacity:.8;
+    flex:0 0 auto; font-size:12px; line-height:1.2; opacity:.8; margin-top:1px;
+  }
+  .cliente-item .cliente-item-derecha{
+    grid-column:2;
+    display:flex; align-items:center; gap:4px 6px;
+    flex-shrink:0;
   }
   .cliente-item .cliente-saldo-badge{
-    grid-column:2;
-    justify-self:end;
+    flex:0 0 auto;
     font-family:var(--font-mono); font-size:10px; font-weight:600;
     white-space:nowrap; line-height:1.1;
     padding:0; border-radius:0; background:none;
@@ -411,9 +420,8 @@
   }
   .cliente-item .cliente-saldo-badge.deuda{ color:#b45309; }
   .cliente-item .acciones{
-    grid-column:3;
-    justify-self:end;
     flex-wrap:nowrap;
+    flex-shrink:0;
   }
   .cliente-notas-titulo{
     margin:0 0 8px; font-size:12px; font-weight:800; letter-spacing:.06em;
