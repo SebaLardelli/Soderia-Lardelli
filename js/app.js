@@ -569,6 +569,7 @@
     }).join('');
     var lista = '<div class="cliente-notas-lista' + (opts.detalle ? ' cliente-notas-lista--detalle' : '') + '">' + chips + '</div>';
     if (opts.detalle) return lista;
+    if (opts.compact) return '<div class="cliente-notas-inline">' + lista + '</div>';
     return '<div class="cliente-notas-block">' +
       '<div class="cliente-notas-etiqueta">Notas</div>' +
       lista +
@@ -1285,14 +1286,14 @@ return nuevo;
       } else {
         wrap.innerHTML = '<div class="cat-lista">' + clientes.slice().sort(function(a,b){ return a.nombre.localeCompare(b.nombre); }).map(function(c){
           var saldo = saldoClientePorNombre(c.nombre);
-          var notasHtml = htmlNotasCliente(c);
+          var notasHtml = htmlNotasCliente(c, { compact: true });
           var saldoHtml = saldo > 0.004
-            ? '<div class="cliente-saldo deuda">Debe ' + money(saldo) + '</div>'
-            : '<div class="cliente-saldo al-dia">Al día</div>';
+            ? '<span class="cliente-saldo cliente-saldo-badge deuda">Debe ' + money(saldo) + '</span>'
+            : '<span class="cliente-saldo cliente-saldo-badge al-dia">Al día</span>';
           return '<div class="cliente-item-wrap">' +
             '<div class="cat-item cliente-item">' +
-            '<div class="cliente-item-head">' +
               '<span class="nombre">' + escapeHtml(c.nombre) + '</span>' +
+              saldoHtml +
               '<span class="acciones">' +
                 '<button type="button" class="btn-icon" title="Agregar nota" data-action="agregar-nota-cliente" data-id="' + escapeHtml(c.id) + '">📝</button>' +
                 '<button type="button" class="btn-icon" title="Historial de compras" data-action="ver-cliente" data-id="' + escapeHtml(c.id) + '">📋</button>' +
@@ -1301,8 +1302,6 @@ return nuevo;
               '</span>' +
             '</div>' +
             notasHtml +
-            saldoHtml +
-          '</div>' +
           (clienteNotaAbiertoId === c.id ? htmlFormNotaCliente(c) : '') +
           '</div>';
         }).join('') + '</div>';
