@@ -14,6 +14,7 @@
   var historial = [];           // [{id, numero, fecha, cliente, lineas, subtotal, descuentoMonto, total, negocio, guardadoEn}]
   var clientes = [];            // {id, nombre}
   var editandoClienteId = null;
+  var boletaReeditandoId = null;
   var boletaCompartidaWpp = false;
   var boletaImpresa = false;
   var supabaseClient = null;
@@ -58,12 +59,31 @@
     if (el) el.value = String(contadorBoleta).padStart(4, '0');
   }
 
+  function numeroBoletaNumerico(valor){
+    var n = parseInt(String(valor || '').replace(/\D/g, ''), 10);
+    return isNaN(n) ? 0 : n;
+  }
+
+  function recalcularContadorBoletaTrasEliminar(){
+    if (historial.length === 0){
+      contadorBoleta = 1;
+    } else {
+      var max = 0;
+      historial.forEach(function(h){
+        var n = numeroBoletaNumerico(h.numero);
+        if (n > max) max = n;
+      });
+      contadorBoleta = Math.max(1, max + 1);
+    }
+    if (!boletaReeditandoId) actualizarNumeroBoleta();
+  }
+
   function sincronizarContadorBoleta(){
     if (contadorBoletaManual) return;
     var max = 0;
     historial.forEach(function(h){
-      var n = parseInt(String(h.numero || '').replace(/\D/g, ''), 10);
-      if (!isNaN(n) && n > max) max = n;
+      var n = numeroBoletaNumerico(h.numero);
+      if (n > max) max = n;
     });
     if (max >= contadorBoleta) contadorBoleta = max + 1;
   }
@@ -215,6 +235,42 @@
     boletaCompartidaWpp = false;
     boletaImpresa = false;
   }
+
+  function setBoletaFechaEditable(editable){
+    var fechaEl = document.getElementById('b-fecha');
+    if (!fechaEl) return;
+    fechaEl.readOnly = !editable;
+    fechaEl.title = editable ? '' : 'La fecha se conserva al editar una boleta guardada';
+  }
+
+  function mostrarBannerBoletaReeditando(h){
+    boletaReeditandoId = h.id;
+    var banner = document.getElementById('boleta-reeditando-banner');
+    var numEl = document.getElementById('boleta-reeditando-numero');
+    if (banner) banner.style.display = 'flex';
+    if (numEl) numEl.textContent = h.numero || '—';
+    var btnGuardar = document.getElementById('btn-guardar-historial');
+    if (btnGuardar) btnGuardar.textContent = '💾 Guardar cambios';
+    setBoletaFechaEditable(false);
+  }
+
+  function ocultarBannerBoletaReeditando(){
+    boletaReeditandoId = null;
+    var banner = document.getElementById('boleta-reeditando-banner');
+    if (banner) banner.style.display = 'none';
+    var btnGuardar = document.getElementById('btn-guardar-historial');
+    if (btnGuardar) btnGuardar.textContent = '📥 Guardar en historial';
+    setBoletaFechaEditable(true);
+  }
+
+  window.cancelarReedicionBoleta = function(){
+    if (!boletaReeditandoId) return;
+    if (hayBoletaPendiente() && !confirm('¿Descartar los cambios de la boleta N° ' + (document.getElementById('b-numero').value || '—') + '?')) return;
+    ocultarBannerBoletaReeditando();
+    limpiarBoletaActual();
+    actualizarNumeroBoleta();
+    mostrarAviso('Edición cancelada');
+  };
 
   function limpiarBoletaActual(){
     cantidades = {};
@@ -1529,14 +1585,20 @@ return nuevo;
 
   window.nuevaBoleta = function(){
     if (!resolverBoletaPendienteAntesDeReemplazar(
-      '¿Guardar esta boleta en el historial antes de empezar una nueva?',
-      '¿Empezar una boleta nueva sin guardar? Se perderá la boleta actual.'
+      boletaReeditandoId
+        ? '¿Guardar los cambios de esta boleta antes de empezar una nueva?'
+        : '¿Guardar esta boleta en el historial antes de empezar una nueva?',
+      boletaReeditandoId
+        ? '¿Empezar una boleta nueva sin guardar los cambios? Se perderá la edición.'
+        : '¿Empezar una boleta nueva sin guardar? Se perderá la boleta actual.'
     )) return;
-    if (!hayBoletaPendiente()){
+    if (!hayBoletaPendiente() && !boletaReeditandoId){
       mostrarAviso('Boleta nueva lista 🧾');
       return;
     }
-    contadorBoleta += 1;
+    var eraReedicion = !!boletaReeditandoId;
+    ocultarBannerBoletaReeditando();
+    if (!eraReedicion) contadorBoleta += 1;
     actualizarNumeroBoleta();
     limpiarBoletaActual();
     persistirLocalStorage();
@@ -1688,6 +1750,69 @@ return nuevo;
     var cliente = document.getElementById('b-cliente').value.trim();
     var pagadaEl = document.getElementById('b-pagada');
     var pagada = pagadaEl ? pagadaEl.checked : false;
+
+    if (boletaReeditandoId){
+      var idx = historial.findIndex(function(x){ return x.id === boletaReeditandoId; });
+      if (idx !== -1){
+        var anterior = historial[idx];
+        var actualizado = {
+          id: anterior.id,
+          numero: anterior.numero,
+          fecha: anterior.fecha,
+          guardadoEn: anterior.guardadoEn,
+          recordatorioSemana: anterior.recordatorioSemana,
+          cliente: cliente,
+          negocio: document.getElementById('b-negocio').value || '',
+          lineas: calc.lineas,
+          subtotal: calc.subtotal,
+          descuentoMonto: calc.descuentoMonto,
+          total: calc.total
+        };
+        if (pagada){
+          actualizado.abonos = Array.isArray(anterior.abonos) ? anterior.abonos.slice() : [];
+          var saldo = saldoPendienteBoleta(anterior);
+          if (saldo > 0.004){
+            actualizado.abonos.push({
+              id: uid(),
+              monto: saldo,
+              fecha: hoyISO(),
+              registradoEn: new Date().toISOString()
+            });
+          }
+          actualizado.montoPagado = calc.total;
+          actualizado.pagadaEn = anterior.pagadaEn || new Date().toISOString();
+        } else if (boletaEstaPagada(anterior)){
+          actualizado.montoPagado = 0;
+          actualizado.abonos = [];
+          delete actualizado.pagadaEn;
+        } else {
+          actualizado.abonos = Array.isArray(anterior.abonos) ? anterior.abonos.slice() : [];
+          actualizado.montoPagado = montoPagadoBoleta(anterior);
+        }
+        sincronizarEstadoPagoBoleta(actualizado);
+        if (!boletaEstaPagada(actualizado)) ajustarPagosBoletaTrasCambioTotal(actualizado);
+        historial[idx] = normalizarBoletaHistorial(actualizado);
+        ocultarBannerBoletaReeditando();
+        limpiarBoletaActual();
+        actualizarNumeroBoleta();
+        persistirLocalStorage();
+        actualizarStatHistorial();
+        renderHistorial();
+        renderClientes();
+        if (!opciones.silencioso){
+          if (eraNuevo){
+            mostrarAviso('Boleta N° ' + (actualizado.numero || '—') + ' actualizada · «' + cliente + '» agregado a clientes ✅');
+          } else if (boletaEstaPagada(actualizado)){
+            mostrarAviso('Boleta N° ' + (actualizado.numero || '—') + ' actualizada y archivada ✅');
+          } else {
+            mostrarAviso('Boleta N° ' + (actualizado.numero || '—') + ' actualizada ✅');
+          }
+        }
+        return true;
+      }
+      ocultarBannerBoletaReeditando();
+    }
+
     var registro = {
       id: uid(),
       numero: document.getElementById('b-numero').value,
@@ -2023,6 +2148,7 @@ return nuevo;
 
     abrirWhatsappConTexto(textoLimpiezaArchivoParaWhatsapp(lote));
     historial = historial.filter(function(h){ return !ids[h.id]; });
+    recalcularContadorBoletaTrasEliminar();
     persistirLocalStorage();
     renderHistorial();
     cerrarLimpiezaArchivo();
@@ -2140,11 +2266,16 @@ return nuevo;
     if (!h) return;
     var etiqueta = h.cliente ? ('de "' + h.cliente + '"') : ('N° ' + h.numero);
     if (!confirm('¿Eliminar la boleta ' + etiqueta + ' del historial? Esta acción no se puede deshacer.')) return;
+    if (boletaReeditandoId === id){
+      ocultarBannerBoletaReeditando();
+      limpiarBoletaActual();
+    }
     historial = historial.filter(function(x){ return x.id !== id; });
+    recalcularContadorBoletaTrasEliminar();
     persistirLocalStorage();
     renderHistorial();
     renderClientes();
-    mostrarAviso('Boleta eliminada del historial');
+    mostrarAviso('Boleta eliminada · próximo N° ' + String(contadorBoleta).padStart(4, '0'));
   };
 
   window.verDetalleHistorial = function(id){
@@ -2201,33 +2332,52 @@ return nuevo;
     var h = buscarEnHistorial(id);
     if (!h) return;
     if (!resolverBoletaPendienteAntesDeReemplazar(
-      '¿Guardar la boleta actual en el historial antes de abrir otra?',
-      '¿Abrir la boleta del historial sin guardar la actual? Se perderá la boleta actual.'
+      boletaReeditandoId
+        ? '¿Guardar los cambios de la boleta actual antes de abrir otra del historial?'
+        : '¿Guardar la boleta actual en el historial antes de abrir otra?',
+      boletaReeditandoId
+        ? '¿Abrir otra boleta sin guardar los cambios? Se perderá la edición actual.'
+        : '¿Abrir la boleta del historial sin guardar la actual? Se perderá la boleta actual.'
     )) return;
 
     cantidades = {};
     itemsManuales = [];
     h.lineas.forEach(function(l){
-      var prod = productos.find(function(p){ return p.nombre === l.nombre && p.precio === l.precio; });
+      if (l.manual){
+        itemsManuales.push({ id: l.id || uid(), nombre: l.nombre, precio: l.precio, cantidad: l.cantidad });
+        return;
+      }
+      var prod = null;
+      if (l.id){
+        prod = productos.find(function(p){ return String(p.id) === String(l.id); });
+      }
+      if (!prod){
+        prod = productos.find(function(p){ return p.nombre === l.nombre && p.precio === l.precio; });
+      }
       if (prod){
         cantidades[prod.id] = (cantidades[prod.id] || 0) + l.cantidad;
       } else {
-        itemsManuales.push({ id: uid(), nombre: l.nombre, precio: l.precio, cantidad: l.cantidad });
+        itemsManuales.push({ id: l.id || uid(), nombre: l.nombre, precio: l.precio, cantidad: l.cantidad });
       }
     });
 
     document.getElementById('b-numero').value = h.numero || '';
     document.getElementById('b-fecha').value = h.fecha || hoyISO();
     document.getElementById('b-cliente').value = h.cliente || '';
+    if (h.negocio) document.getElementById('b-negocio').value = h.negocio;
     validarClienteBoleta(false);
     document.getElementById('b-descuento').value = h.descuentoMonto || 0;
     document.getElementById('b-descuento-tipo').value = 'monto';
+    var pagadaEl = document.getElementById('b-pagada');
+    if (pagadaEl) pagadaEl.checked = boletaEstaPagada(h);
+    resetearFlagsBoletaSesion();
+    mostrarBannerBoletaReeditando(h);
 
     cerrarDetalleHistorial();
     cambiarTab('boleta');
     renderListaBoleta();
     renderResumenBoleta();
-    mostrarAviso('Boleta reabierta para editar 🧾');
+    mostrarAviso('Boleta N° ' + (h.numero || '—') + ' abierta para editar 🧾');
   };
 
 
@@ -2346,6 +2496,8 @@ return nuevo;
     if (btnWhatsappBoleta) btnWhatsappBoleta.addEventListener('click', compartirWhatsapp);
     if (btnNuevaBoleta) btnNuevaBoleta.addEventListener('click', nuevaBoleta);
     if (btnGuardarHistorial) btnGuardarHistorial.addEventListener('click', guardarEnHistorial);
+    var btnCancelarReedicionBoleta = document.getElementById('btn-cancelar-reedicion-boleta');
+    if (btnCancelarReedicionBoleta) btnCancelarReedicionBoleta.addEventListener('click', cancelarReedicionBoleta);
     if (btnCerrarHistorial) btnCerrarHistorial.addEventListener('click', cerrarDetalleHistorial);
 
     var btnRecordatorioOk = document.getElementById('btn-recordatorio-deudas-ok');
