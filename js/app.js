@@ -15,6 +15,8 @@
   var clientes = [];            // {id, nombre}
   var editandoClienteId = null;
   var boletaReeditandoId = null;
+  var boletaGuardadaActivaId = null;
+  var snapshotBoletaGuardada = null;
   var boletaCompartidaWpp = false;
   var boletaImpresa = false;
   var supabaseClient = null;
@@ -236,6 +238,72 @@
     boletaImpresa = false;
   }
 
+  function snapshotBoletaActual(){
+    var calc = calcularBoleta();
+    var pagadaEl = document.getElementById('b-pagada');
+    return JSON.stringify({
+      numero: document.getElementById('b-numero').value,
+      fecha: document.getElementById('b-fecha').value,
+      cliente: document.getElementById('b-cliente').value.trim(),
+      descuento: document.getElementById('b-descuento').value,
+      descuentoTipo: document.getElementById('b-descuento-tipo').value,
+      pagada: pagadaEl ? pagadaEl.checked : false,
+      lineas: calc.lineas.map(function(l){
+        return { id: l.id, nombre: l.nombre, precio: l.precio, cantidad: l.cantidad, manual: !!l.manual };
+      })
+    });
+  }
+
+  function marcarBoletaGuardada(id){
+    boletaGuardadaActivaId = id;
+    snapshotBoletaGuardada = snapshotBoletaActual();
+    actualizarEstadoBotonesBoletaAccion();
+  }
+
+  function limpiarBoletaGuardada(){
+    boletaGuardadaActivaId = null;
+    snapshotBoletaGuardada = null;
+    actualizarEstadoBotonesBoletaAccion();
+  }
+
+  function boletaEstaGuardadaSinCambios(){
+    return !!(boletaGuardadaActivaId && snapshotBoletaGuardada && snapshotBoletaActual() === snapshotBoletaGuardada);
+  }
+
+  function validarBoletaGuardadaParaAccion(){
+    if (boletaEstaGuardadaSinCambios()) return true;
+    mostrarAviso('Guardá la boleta en el historial antes de imprimir o compartir');
+    return false;
+  }
+
+  function actualizarEstadoBotonesBoletaAccion(){
+    var puede = boletaEstaGuardadaSinCambios();
+    var titulo = puede ? '' : 'Guardá la boleta en el historial primero';
+    var btnWpp = document.getElementById('btn-whatsapp-boleta');
+    var btnImp = document.getElementById('btn-imprimir-boleta');
+    if (btnWpp){
+      btnWpp.disabled = !puede;
+      btnWpp.title = titulo;
+    }
+    if (btnImp){
+      btnImp.disabled = !puede;
+      btnImp.title = titulo;
+    }
+  }
+
+  function datosBoletaDesdeHistorial(h){
+    return {
+      negocio: h.negocio || 'Boleta',
+      numero: h.numero,
+      fecha: h.fecha,
+      cliente: h.cliente || '',
+      lineas: h.lineas || [],
+      subtotal: h.subtotal,
+      descuentoMonto: h.descuentoMonto || 0,
+      total: h.total
+    };
+  }
+
   function setBoletaFechaEditable(editable){
     var fechaEl = document.getElementById('b-fecha');
     if (!fechaEl) return;
@@ -244,6 +312,7 @@
   }
 
   function mostrarBannerBoletaReeditando(h){
+    limpiarBoletaGuardada();
     boletaReeditandoId = h.id;
     var banner = document.getElementById('boleta-reeditando-banner');
     var numEl = document.getElementById('boleta-reeditando-numero');
@@ -276,6 +345,7 @@
     cantidades = {};
     itemsManuales = [];
     resetearFlagsBoletaSesion();
+    limpiarBoletaGuardada();
     document.getElementById('b-descuento').value = 0;
     document.getElementById('b-cliente').value = '';
     document.getElementById('b-cliente').classList.remove('field-invalid', 'field-ok');
@@ -1578,6 +1648,7 @@ return nuevo;
     document.getElementById('r-subtotal').textContent = money(calc.subtotal);
     document.getElementById('r-total').textContent = money(calc.total);
     document.getElementById('mobile-total').textContent = money(calc.total);
+    actualizarEstadoBotonesBoletaAccion();
   }
   window.renderResumenBoleta = renderResumenBoleta;
   window.renderListaBoleta = renderListaBoleta;
@@ -1650,38 +1721,15 @@ return nuevo;
 
   window.imprimirBoleta = function(){
     if (!validarBoletaParaAccion()) return;
-    var calc = calcularBoleta();
-    var datos = {
-      negocio: document.getElementById('b-negocio').value || 'Boleta',
-      numero: document.getElementById('b-numero').value,
-      fecha: document.getElementById('b-fecha').value,
-      cliente: document.getElementById('b-cliente').value.trim(),
-      lineas: calc.lineas,
-      subtotal: calc.subtotal,
-      descuentoMonto: calc.descuentoMonto,
-      total: calc.total
-    };
-    var doble = document.getElementById('print-doble');
-    doble.innerHTML =
-      construirReceiptEstatico(datos, 'Copia comercio') +
-      construirReceiptEstatico(datos, 'Copia cliente');
-    window.print();
+    if (!validarBoletaGuardadaParaAccion()) return;
+    imprimirBoletaHistorial(boletaGuardadaActivaId);
     boletaImpresa = true;
   };
 
   window.imprimirBoletaHistorial = function(id){
     var h = buscarEnHistorial(id);
     if (!h) return;
-    var datos = {
-      negocio: h.negocio || 'Boleta',
-      numero: h.numero,
-      fecha: h.fecha,
-      cliente: h.cliente || '',
-      lineas: h.lineas || [],
-      subtotal: h.subtotal,
-      descuentoMonto: h.descuentoMonto || 0,
-      total: h.total
-    };
+    var datos = datosBoletaDesdeHistorial(h);
     var doble = document.getElementById('print-doble');
     if (!doble) return;
     doble.innerHTML =
@@ -1725,18 +1773,10 @@ return nuevo;
 
   window.compartirWhatsapp = function(){
     if (!validarBoletaParaAccion()) return;
-    var calc = calcularBoleta();
-    var datos = {
-      negocio: document.getElementById('b-negocio').value || 'Boleta',
-      numero: document.getElementById('b-numero').value,
-      fecha: document.getElementById('b-fecha').value,
-      cliente: document.getElementById('b-cliente').value.trim(),
-      lineas: calc.lineas,
-      subtotal: calc.subtotal,
-      descuentoMonto: calc.descuentoMonto,
-      total: calc.total
-    };
-    abrirWhatsappConTexto(textoBoletaParaWhatsapp(datos));
+    if (!validarBoletaGuardadaParaAccion()) return;
+    var h = buscarEnHistorial(boletaGuardadaActivaId);
+    if (!h) return;
+    abrirWhatsappConTexto(textoBoletaParaWhatsapp(datosBoletaDesdeHistorial(h)));
     boletaCompartidaWpp = true;
   };
 
@@ -1793,8 +1833,7 @@ return nuevo;
         if (!boletaEstaPagada(actualizado)) ajustarPagosBoletaTrasCambioTotal(actualizado);
         historial[idx] = normalizarBoletaHistorial(actualizado);
         ocultarBannerBoletaReeditando();
-        limpiarBoletaActual();
-        actualizarNumeroBoleta();
+        marcarBoletaGuardada(actualizado.id);
         persistirLocalStorage();
         actualizarStatHistorial();
         renderHistorial();
@@ -1832,10 +1871,10 @@ return nuevo;
     sincronizarEstadoPagoBoleta(registro);
     historial.unshift(registro);
     contadorBoleta += 1;
-    actualizarNumeroBoleta();
-    limpiarBoletaActual();
+    marcarBoletaGuardada(registro.id);
     persistirLocalStorage();
     actualizarStatHistorial();
+    renderHistorial();
     renderClientes();
     if (!opciones.silencioso){
       if (eraNuevo){
@@ -2269,7 +2308,9 @@ return nuevo;
     if (boletaReeditandoId === id){
       ocultarBannerBoletaReeditando();
       limpiarBoletaActual();
+      actualizarNumeroBoleta();
     }
+    if (boletaGuardadaActivaId === id) limpiarBoletaGuardada();
     historial = historial.filter(function(x){ return x.id !== id; });
     recalcularContadorBoletaTrasEliminar();
     persistirLocalStorage();
@@ -2626,12 +2667,20 @@ return nuevo;
     var bDescuentoTipo = document.getElementById('b-descuento-tipo');
     if (bNegocio) bNegocio.addEventListener('input', guardarNegocio);
     if (bCliente){
-      bCliente.addEventListener('input', function(){ validarClienteBoleta(false); });
-      bCliente.addEventListener('change', normalizarClienteBoleta);
+      bCliente.addEventListener('input', function(){
+        validarClienteBoleta(false);
+        actualizarEstadoBotonesBoletaAccion();
+      });
+      bCliente.addEventListener('change', function(){
+        normalizarClienteBoleta();
+        actualizarEstadoBotonesBoletaAccion();
+      });
       bCliente.addEventListener('blur', normalizarClienteBoleta);
     }
     if (bDescuento) bDescuento.addEventListener('input', renderResumenBoleta);
     if (bDescuentoTipo) bDescuentoTipo.addEventListener('change', renderResumenBoleta);
+    var bPagada = document.getElementById('b-pagada');
+    if (bPagada) bPagada.addEventListener('change', actualizarEstadoBotonesBoletaAccion);
 
     var pinBtn = document.getElementById('pin-btn');
     var pinInput = document.getElementById('pin-input');
