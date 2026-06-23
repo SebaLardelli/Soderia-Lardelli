@@ -568,6 +568,48 @@
     return '<span class="cliente-nota-pin" title="' + escapeHtml(hint) + '" aria-label="Tiene notas">📌</span>';
   }
 
+  function todasLasNotasClientes(){
+    var items = [];
+    clientes.forEach(function(c){
+      (c.recordatorios || []).forEach(function(n){
+        if (!n || !String(n.texto || '').trim()) return;
+        items.push({
+          clienteId: c.id,
+          clienteNombre: c.nombre,
+          notaId: n.id,
+          texto: String(n.texto).trim(),
+          creadoEn: n.creadoEn || ''
+        });
+      });
+    });
+    return items.sort(function(a, b){
+      var cmp = a.clienteNombre.localeCompare(b.clienteNombre, 'es');
+      if (cmp !== 0) return cmp;
+      return String(a.creadoEn).localeCompare(String(b.creadoEn));
+    });
+  }
+
+  function renderRecordatorios(){
+    var wrap = document.getElementById('recordatorios-wrap');
+    var countEl = document.getElementById('recordatorios-count');
+    if (!wrap) return;
+    var items = todasLasNotasClientes();
+    if (countEl) countEl.textContent = '(' + items.length + ')';
+    if (items.length === 0){
+      wrap.innerHTML = '<div class="empty-state">Todavía no hay recordatorios.<br><span style="font-size:12px;color:var(--muted);">Agregalos desde Clientes con el botón 📝.</span></div>';
+      return;
+    }
+    wrap.innerHTML = '<div class="recordatorios-lista">' + items.map(function(item){
+      return '<div class="recordatorio-item">' +
+        '<div class="recordatorio-item-head">' +
+          '<button type="button" class="recordatorio-cliente" data-action="ver-cliente" data-id="' + escapeHtml(item.clienteId) + '" title="Ver cliente">' + escapeHtml(item.clienteNombre) + '</button>' +
+          '<button type="button" class="cliente-nota-borrar" title="Quitar nota" data-action="eliminar-nota-cliente" data-id="' + escapeHtml(item.clienteId) + '" data-nota-id="' + escapeHtml(item.notaId) + '">✕</button>' +
+        '</div>' +
+        '<p class="recordatorio-texto">📌 ' + escapeHtml(item.texto) + '</p>' +
+      '</div>';
+    }).join('') + '</div>';
+  }
+
   function htmlNotasCliente(c, opts){
     opts = opts || {};
     var notas = (c.recordatorios || []);
@@ -634,6 +676,7 @@
     clienteNotaAbiertoId = null;
     persistirLocalStorage();
     renderClientes();
+    renderRecordatorios();
     if (clienteDetalleAbiertoId === id) verDetalleCliente(id);
     mostrarAviso('Nota agregada ✅');
   };
@@ -648,6 +691,7 @@
     c.recordatorios = c.recordatorios.filter(function(n){ return n.id !== notaId; });
     persistirLocalStorage();
     renderClientes();
+    renderRecordatorios();
     if (clienteDetalleAbiertoId === clienteId) verDetalleCliente(clienteId);
     mostrarAviso('Nota eliminada');
   };
@@ -894,6 +938,7 @@
     renderResumenBoleta();
     actualizarStatHistorial();
     renderClientes();
+    renderRecordatorios();
 }
 
   async function leerDesdeNube(){
@@ -1324,6 +1369,7 @@ return nuevo;
     }
     renderClientesDatalist();
     if (listaClientesBoletaEstaAbierta()) renderListaClientesBoleta();
+    renderRecordatorios();
   }
 
   window.verDetalleCliente = function(id){
@@ -3083,6 +3129,7 @@ return nuevo;
     renderResumenBoleta();
     actualizarStatHistorial();
     renderClientes();
+    renderRecordatorios();
     mostrarAvisosInicio();
   });
 })();

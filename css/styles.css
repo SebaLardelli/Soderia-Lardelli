@@ -161,6 +161,7 @@
   /* ---------- productos grid ---------- */
   .productos-grid{ display:grid; grid-template-columns: 320px 1fr; gap:18px; align-items:start; }
   .col-izq{ display:flex; flex-direction:column; gap:18px; }
+  .col-catalogo{ display:flex; flex-direction:column; gap:18px; min-width:0; }
 
   /* ---------- categorías ---------- */
   .cat-lista{ display:flex; flex-direction:column; gap:6px; }
@@ -424,6 +425,45 @@
     display:flex; align-items:center; gap:4px;
     flex:0 0 auto; flex-wrap:nowrap;
   }
+
+  /* ---------- recordatorios (debajo del catálogo) ---------- */
+  .card-recordatorios{ margin-top:0; }
+  .recordatorios-scroll{
+    max-height:min(38vh, 320px);
+    border:1px solid var(--line-soft);
+    border-radius:10px;
+    background:var(--paper);
+    padding:4px 6px;
+  }
+  .recordatorios-scroll .empty-state{
+    padding:14px 8px; font-size:13px; line-height:1.4;
+  }
+  .recordatorios-lista{
+    display:flex; flex-direction:column; gap:8px;
+  }
+  .recordatorio-item{
+    padding:8px 10px;
+    border:1px solid var(--nota-border); border-left:4px solid var(--gold);
+    border-radius:8px;
+    background:linear-gradient(135deg, var(--nota-bg) 0%, var(--nota-bg-end) 100%);
+    box-shadow:0 1px 4px rgba(26,77,140,.05);
+  }
+  .recordatorio-item-head{
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    margin-bottom:5px;
+  }
+  .recordatorio-cliente{
+    flex:1; min-width:0; border:none; background:none; padding:0;
+    font-weight:700; font-size:13px; color:var(--ink); cursor:pointer;
+    text-align:left; font-family:var(--font-body);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .recordatorio-cliente:hover{ color:var(--accent-dark); text-decoration:underline; }
+  .recordatorio-texto{
+    margin:0; font-size:13px; line-height:1.4; color:var(--ink);
+    word-break:break-word;
+  }
+
   .cliente-notas-titulo{
     margin:0 0 8px; font-size:12px; font-weight:800; letter-spacing:.06em;
     text-transform:uppercase; color:var(--gold);
@@ -1172,7 +1212,7 @@
     .search-row input{ padding:9px 10px 9px 34px; font-size:14px; }
 
     .productos-grid{ grid-template-columns:1fr; gap:12px; }
-    .col-izq{ gap:12px; }
+    .col-izq, .col-catalogo{ gap:12px; }
 
     .boleta-grid{
       display:flex; flex-direction:column; gap:12px; align-items:stretch;
@@ -1223,6 +1263,7 @@
     .lista-meta{ font-size:11px; margin:6px 0 4px; }
 
     .catalogo-scroll{ max-height:min(44vh, 360px); }
+    .recordatorios-scroll{ max-height:min(32vh, 260px); }
     .boleta-scroll{ max-height:min(40vh, 320px); }
     .lista-side-scroll{ max-height:160px; }
     .clientes-scroll{ max-height:min(36vh, 220px); margin-top:6px; }
