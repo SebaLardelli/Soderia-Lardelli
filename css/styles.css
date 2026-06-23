@@ -376,8 +376,8 @@
     flex:0 0 auto; font-size:14px; line-height:1.35; opacity:.85;
   }
   .cliente-nota-texto{
-    flex:1; font-family:var(--font-hand); font-size:clamp(17px, 4vw, 19px);
-    font-weight:700; color:var(--ink); line-height:1.25;
+    flex:1; font-family:var(--font-body); font-size:13.5px;
+    font-weight:600; color:var(--ink-soft); line-height:1.4;
     word-break:break-word; overflow-wrap:anywhere;
   }
   .cliente-nota-borrar{
@@ -969,7 +969,7 @@
       padding:8px 9px 9px; border-left-width:3px; box-sizing:border-box;
     }
     .cliente-nota-chip{ align-items:center; }
-    .cliente-nota-texto{ font-size:17px; }
+    .cliente-nota-texto{ font-size:13.5px; }
     .cliente-nota-borrar{ width:34px; height:34px; flex-shrink:0; }
 
     .cliente-nota-form{
@@ -1075,7 +1075,7 @@
     .stepper input{ width:34px; font-size:12px; }
     .cat-filtro-btn{ padding:5px 10px; font-size:11.5px; }
 
-    .cliente-nota-texto{ font-size:16px; }
+    .cliente-nota-texto{ font-size:13px; }
     .cliente-notas-etiqueta{ font-size:9px; }
     .cliente-detalle-stats{ grid-template-columns:1fr; }
     .cliente-detalle-stats > div:last-child{ grid-column:auto; }
