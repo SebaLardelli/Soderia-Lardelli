@@ -90,6 +90,7 @@
   }
 
   var historialDetalleAbiertoId = null;
+  var clienteDetalleAbiertoId = null;
   var pinResolver = null;
 
   window.validarClienteBoleta = function(mostrarError){
@@ -273,9 +274,95 @@
   function normalizarBoletaHistorial(h){
     if (!h || typeof h !== 'object') return h;
     if (h.pagada === undefined) h.pagada = false;
-    h.archivada = !!h.pagada;
+    if (h.montoPagado === undefined || h.montoPagado === null){
+      h.montoPagado = h.pagada ? (h.total || 0) : 0;
+    } else {
+      h.montoPagado = Math.max(0, parseFloat(h.montoPagado) || 0);
+    }
     if (h.recordatorioSemana === undefined) h.recordatorioSemana = 0;
+    sincronizarEstadoPagoBoleta(h);
     return h;
+  }
+
+  function normalizarCliente(c){
+    if (!c || typeof c !== 'object') return c;
+    if (c.notas === undefined || c.notas === null) c.notas = '';
+    return c;
+  }
+
+  function montoPagadoBoleta(h){
+    if (!h) return 0;
+    var p = parseFloat(h.montoPagado);
+    if (isNaN(p) || p < 0) return 0;
+    var total = isFinite(h.total) ? h.total : 0;
+    return Math.min(p, total);
+  }
+
+  function saldoPendienteBoleta(h){
+    if (!h) return 0;
+    var total = isFinite(h.total) ? h.total : 0;
+    return Math.max(0, total - montoPagadoBoleta(h));
+  }
+
+  function boletaEstaPagada(h){
+    return saldoPendienteBoleta(h) <= 0.004;
+  }
+
+  function boletaEsParcial(h){
+    return !boletaEstaPagada(h) && montoPagadoBoleta(h) > 0.004;
+  }
+
+  function sincronizarEstadoPagoBoleta(h){
+    if (!h) return;
+    var saldo = saldoPendienteBoleta(h);
+    if (saldo <= 0.004){
+      h.pagada = true;
+      h.archivada = true;
+      h.montoPagado = h.total || 0;
+    } else {
+      h.pagada = false;
+      h.archivada = false;
+      delete h.pagadaEn;
+    }
+  }
+
+  function etiquetaPagoBoleta(h){
+    if (boletaEstaPagada(h)) return 'Pagada';
+    if (boletaEsParcial(h)) return 'Parcial · debe ' + money(saldoPendienteBoleta(h));
+    return 'Pago pendiente';
+  }
+
+  function historialDelCliente(nombre){
+    var n = normalizarNombreCliente(nombre).toLowerCase();
+    if (!n) return [];
+    return historial.filter(function(h){
+      return normalizarNombreCliente(h.cliente).toLowerCase() === n;
+    }).sort(function(a, b){
+      var ta = new Date(a.guardadoEn || a.fecha || 0).getTime();
+      var tb = new Date(b.guardadoEn || b.fecha || 0).getTime();
+      return tb - ta;
+    });
+  }
+
+  function saldoClientePorNombre(nombre){
+    var total = 0;
+    historialDelCliente(nombre).forEach(function(h){
+      total += saldoPendienteBoleta(h);
+    });
+    return total;
+  }
+
+  function totalCobranzaPendiente(){
+    var total = 0;
+    var clientesConDeuda = {};
+    historial.forEach(function(h){
+      var saldo = saldoPendienteBoleta(h);
+      if (saldo <= 0.004) return;
+      total += saldo;
+      var key = normalizarNombreCliente(h.cliente).toLowerCase() || '__sin_nombre__';
+      clientesConDeuda[key] = true;
+    });
+    return { total: total, clientes: Object.keys(clientesConDeuda).length };
   }
 
   function aplicarPayload(datos){
@@ -284,7 +371,7 @@
     categorias = Array.isArray(datos.categorias) ? datos.categorias : [];
     contadorBoleta = datos.contadorBoleta || 1;
     historial = Array.isArray(datos.historial) ? datos.historial.map(normalizarBoletaHistorial) : [];
-    clientes = Array.isArray(datos.clientes) ? datos.clientes : [];
+    clientes = Array.isArray(datos.clientes) ? datos.clientes.map(normalizarCliente) : [];
     sincronizarContadorBoleta();
     if (document.getElementById('b-negocio')){
       document.getElementById('b-negocio').value = datos.negocio || 'Soderia Lardelli';
@@ -642,7 +729,7 @@
     });
     if (dup) return dup;
 
-    var nuevo = { id: uid(), nombre: nombre };
+    var nuevo = { id: uid(), nombre: nombre, notas: '' };
     clientes.push(nuevo);
     persistirLocalStorage();
     renderClientes();
@@ -652,6 +739,7 @@ return nuevo;
   window.guardarCliente = function(ev){
     if (ev) ev.preventDefault();
     var nombre = normalizarNombreCliente(document.getElementById('cl-nombre').value);
+    var notas = (document.getElementById('cl-notas') && document.getElementById('cl-notas').value || '').trim();
     var errorEl = document.getElementById('cl-error');
     errorEl.textContent = '';
 
@@ -664,11 +752,14 @@ return nuevo;
 
     if (editandoClienteId){
       var existente = clientePorId(editandoClienteId);
-      if (existente){ existente.nombre = nombre; }
+      if (existente){
+        existente.nombre = nombre;
+        existente.notas = notas;
+      }
       cancelarEdicionCliente();
       mostrarAviso('Cliente actualizado ✅');
     } else {
-      clientes.push({ id: uid(), nombre: nombre });
+      clientes.push({ id: uid(), nombre: nombre, notas: notas });
       mostrarAviso('Cliente agregado ✅');
     }
 
@@ -683,6 +774,8 @@ return nuevo;
     if (!c) return;
     editandoClienteId = id;
     document.getElementById('cl-nombre').value = c.nombre;
+    var notasEl = document.getElementById('cl-notas');
+    if (notasEl) notasEl.value = c.notas || '';
     document.getElementById('cli-editing-banner').style.display = 'flex';
     document.getElementById('cl-submit-btn').textContent = 'Guardar cambios';
     document.getElementById('cl-nombre').focus();
@@ -713,14 +806,40 @@ return nuevo;
     var countEl = document.getElementById('clientes-count');
     if (countEl) countEl.textContent = '(' + clientes.length + ')';
 
+    var resumenEl = document.getElementById('clientes-cobranza-resumen');
+    if (resumenEl){
+      var cobranza = totalCobranzaPendiente();
+      if (cobranza.total > 0.004){
+        resumenEl.innerHTML = '<strong>A cobrar:</strong> ' + money(cobranza.total) +
+          ' · <span>' + cobranza.clientes + (cobranza.clientes === 1 ? ' cliente' : ' clientes') + ' con saldo</span>';
+        resumenEl.classList.add('show');
+      } else {
+        resumenEl.innerHTML = 'No hay saldos pendientes de cobro.';
+        resumenEl.classList.remove('show');
+      }
+    }
+
     if (wrap){
       if (clientes.length === 0){
         wrap.innerHTML = '<div class="empty-state" style="padding:18px 6px;">Todavía no cargaste clientes.<br>Agregá el primero arriba para poder referenciarlo en tus boletas.</div>';
       } else {
         wrap.innerHTML = '<div class="cat-lista">' + clientes.slice().sort(function(a,b){ return a.nombre.localeCompare(b.nombre); }).map(function(c){
-          return '<div class="cat-item">' +
-            '<span class="nombre">' + escapeHtml(c.nombre) + '</span>' +
+          var saldo = saldoClientePorNombre(c.nombre);
+          var nota = (c.notas || '').trim();
+          var notaHtml = nota
+            ? '<div class="cliente-nota-preview" title="' + escapeHtml(nota) + '">📝 ' + escapeHtml(nota) + '</div>'
+            : '';
+          var saldoHtml = saldo > 0.004
+            ? '<div class="cliente-saldo deuda">Debe ' + money(saldo) + '</div>'
+            : '<div class="cliente-saldo al-dia">Al día</div>';
+          return '<div class="cat-item cliente-item">' +
+            '<div class="cliente-item-main">' +
+              '<span class="nombre">' + escapeHtml(c.nombre) + '</span>' +
+              notaHtml +
+              saldoHtml +
+            '</div>' +
             '<span class="acciones">' +
+              '<button type="button" class="btn-icon" title="Historial de compras" data-action="ver-cliente" data-id="' + escapeHtml(c.id) + '">📋</button>' +
               '<button type="button" class="btn-icon" title="Editar" data-action="editar-cliente" data-id="' + escapeHtml(c.id) + '">✏️</button>' +
               '<button type="button" class="btn-icon danger" title="Eliminar" data-action="eliminar-cliente" data-id="' + escapeHtml(c.id) + '">🗑️</button>' +
             '</span>' +
@@ -730,6 +849,54 @@ return nuevo;
     }
     renderClientesDatalist();
   }
+
+  window.verDetalleCliente = function(id){
+    var c = clientePorId(id);
+    if (!c) return;
+    clienteDetalleAbiertoId = id;
+    var boletas = historialDelCliente(c.nombre);
+    var saldo = saldoClientePorNombre(c.nombre);
+    var totalComprado = boletas.reduce(function(acc, h){ return acc + (isFinite(h.total) ? h.total : 0); }, 0);
+    var nota = (c.notas || '').trim();
+
+    var historialHtml = boletas.length === 0
+      ? '<div class="empty-state" style="padding:16px 0;">Todavía no hay boletas guardadas para este cliente.</div>'
+      : '<div class="cliente-historial-lista">' + boletas.map(function(h){
+          var estado = boletaEstaPagada(h) ? 'pagada' : (boletaEsParcial(h) ? 'parcial' : 'pendiente');
+          var estadoTxt = boletaEstaPagada(h) ? 'Pagada' : (boletaEsParcial(h) ? ('Parcial · ' + money(saldoPendienteBoleta(h))) : 'Pendiente');
+          return '<div class="cliente-historial-item">' +
+            '<div><strong>N°' + escapeHtml(h.numero || '—') + '</strong> · ' + formatearFechaLegible(h.fecha) + '</div>' +
+            '<div class="cliente-historial-meta">' +
+              '<span class="pago-badge ' + estado + '">' + estadoTxt + '</span>' +
+              '<span class="mono">' + money(h.total) + '</span>' +
+            '</div>' +
+            '<div class="cliente-historial-acciones">' +
+              '<button type="button" class="btn btn-ghost btn-sm" data-action="ver-historial" data-id="' + escapeHtml(h.id) + '">Ver boleta</button>' +
+            '</div>' +
+          '</div>';
+        }).join('') + '</div>';
+
+    var html =
+      '<div class="cliente-detalle-head">' +
+        '<h3>' + escapeHtml(c.nombre) + '</h3>' +
+        (nota ? '<p class="cliente-detalle-notas">📝 ' + escapeHtml(nota) + '</p>' : '<p class="cliente-detalle-notas muted">Sin notas. Editá el cliente para agregar recordatorios.</p>') +
+      '</div>' +
+      '<div class="cliente-detalle-stats">' +
+        '<div><span>Total comprado</span><strong class="mono">' + money(totalComprado) + '</strong></div>' +
+        '<div><span>Saldo pendiente</span><strong class="mono ' + (saldo > 0.004 ? 'deuda' : 'al-dia') + '">' + money(saldo) + '</strong></div>' +
+        '<div><span>Boletas</span><strong>' + boletas.length + '</strong></div>' +
+      '</div>' +
+      '<h4 class="cliente-historial-titulo">Historial de compras</h4>' +
+      historialHtml;
+
+    document.getElementById('cliente-detalle-body').innerHTML = html;
+    document.getElementById('cliente-overlay').classList.add('show');
+  };
+
+  window.cerrarDetalleCliente = function(){
+    clienteDetalleAbiertoId = null;
+    document.getElementById('cliente-overlay').classList.remove('show');
+  };
 
   function renderClientesDatalist(){
     var dl = document.getElementById('clientes-datalist');
@@ -1256,19 +1423,22 @@ return nuevo;
       total: calc.total,
       pagada: pagada,
       archivada: pagada,
+      montoPagado: pagada ? calc.total : 0,
       guardadoEn: new Date().toISOString()
     };
     if (pagada) registro.pagadaEn = registro.guardadoEn;
+    sincronizarEstadoPagoBoleta(registro);
     historial.unshift(registro);
     contadorBoleta += 1;
     actualizarNumeroBoleta();
     limpiarBoletaActual();
     persistirLocalStorage();
     actualizarStatHistorial();
+    renderClientes();
     if (!opciones.silencioso){
       if (eraNuevo){
         mostrarAviso('Boleta guardada · «' + cliente + '» agregado a clientes ✅');
-      } else if (pagada){
+      } else if (boletaEstaPagada(registro)){
         mostrarAviso('Boleta guardada como pagada y archivada ✅');
       } else {
         mostrarAviso('Boleta guardada · siguiente N° ' + String(contadorBoleta).padStart(4, '0'));
@@ -1286,7 +1456,7 @@ return nuevo;
     if (el) el.textContent = historial.length;
     var countEl = document.getElementById('historial-count');
     if (countEl){
-      var pendientes = historial.filter(function(h){ return !h.pagada; }).length;
+      var pendientes = historial.filter(function(h){ return !boletaEstaPagada(h); }).length;
       countEl.textContent = '(' + pendientes + ' pendientes)';
     }
   }
@@ -1299,18 +1469,38 @@ return nuevo;
   }
 
   function htmlPagoBoleta(h, inputId){
-    var pagada = !!h.pagada;
+    var pagada = boletaEstaPagada(h);
     var idAttr = inputId ? ' id="' + inputId + '"' : '';
     return '<label class="pago-check" title="' + (pagada ? 'Desmarcar pago' : 'Marcar como pagada') + '">' +
       '<input type="checkbox" data-action="toggle-pago-historial" data-id="' + escapeHtml(h.id) + '"' + idAttr + (pagada ? ' checked' : '') + '>' +
-      '<span>' + (pagada ? 'Pagada' : 'Pago pendiente') + '</span>' +
+      '<span>' + etiquetaPagoBoleta(h) + '</span>' +
     '</label>';
+  }
+
+  function htmlPagoParcialDetalle(h){
+    if (boletaEstaPagada(h)) return '';
+    var saldo = saldoPendienteBoleta(h);
+    var pagado = montoPagadoBoleta(h);
+    return '<div class="pago-parcial-box">' +
+      '<div class="row"><span>Pagado</span><span class="v mono">' + money(pagado) + '</span></div>' +
+      '<div class="row"><span>Saldo</span><span class="v mono deuda">' + money(saldo) + '</span></div>' +
+      '<div class="pago-parcial-form">' +
+        '<input type="number" id="historial-abono-input" min="0.01" step="0.01" placeholder="Monto del abono" aria-label="Monto del abono">' +
+        '<button type="button" class="btn btn-primary" data-action="registrar-abono" data-id="' + escapeHtml(h.id) + '">Registrar abono</button>' +
+      '</div>' +
+    '</div>';
   }
 
   function renderHistorialItem(h){
     var clienteHtml = h.cliente ? escapeHtml(h.cliente) : '<span class="anon">Sin nombre de cliente</span>';
     var cantItems = h.lineas.reduce(function(acc, l){ return acc + l.cantidad; }, 0);
-    var pagada = !!h.pagada;
+    var pagada = boletaEstaPagada(h);
+    var parcial = boletaEsParcial(h);
+    var badgeClass = pagada ? 'pagada' : (parcial ? 'parcial' : 'pendiente');
+    var badgeTxt = pagada ? 'Archivada' : (parcial ? 'Pago parcial' : 'Cobro pendiente');
+    var montoHtml = parcial
+      ? '<span class="saldo-parcial">' + money(saldoPendienteBoleta(h)) + '<small> de ' + money(h.total) + '</small></span>'
+      : money(h.total);
     return '<div class="historial-item' + (pagada ? ' archivada' : '') + '">' +
       htmlPagoBoleta(h) +
       '<div class="num-badge">N°' + escapeHtml(h.numero || '—') + '</div>' +
@@ -1319,10 +1509,10 @@ return nuevo;
         '<div class="meta">' +
           '<span>📅 ' + formatearFechaLegible(h.fecha) + '</span>' +
           '<span>🧺 ' + cantItems + (cantItems === 1 ? ' ítem' : ' ítems') + '</span>' +
-          '<span class="pago-badge ' + (pagada ? 'pagada' : 'pendiente') + '">' + (pagada ? 'Archivada' : 'Cobro pendiente') + '</span>' +
+          '<span class="pago-badge ' + badgeClass + '">' + badgeTxt + '</span>' +
         '</div>' +
       '</div>' +
-      '<div class="monto mono">' + money(h.total) + '</div>' +
+      '<div class="monto mono">' + montoHtml + '</div>' +
       '<div class="acciones">' +
         '<button type="button" class="btn-icon" title="Ver boleta" data-action="ver-historial" data-id="' + escapeHtml(h.id) + '">👁️</button>' +
         '<button type="button" class="btn-icon" title="Compartir por WhatsApp" data-action="wpp-historial" data-id="' + escapeHtml(h.id) + '">💬</button>' +
@@ -1341,8 +1531,8 @@ return nuevo;
       return;
     }
 
-    var activas = historial.filter(function(h){ return !h.pagada && historialCoincideBusqueda(h, query); });
-    var archivadas = historial.filter(function(h){ return h.pagada && historialCoincideBusqueda(h, query); });
+    var activas = historial.filter(function(h){ return !boletaEstaPagada(h) && historialCoincideBusqueda(h, query); });
+    var archivadas = historial.filter(function(h){ return boletaEstaPagada(h) && historialCoincideBusqueda(h, query); });
 
     if (activas.length === 0 && archivadas.length === 0){
       wrap.innerHTML = '<div class="empty-state">No hay boletas que coincidan con «' + escapeHtml(query) + '».</div>';
@@ -1388,7 +1578,7 @@ return nuevo;
   }
 
   function boletaDebeRecordarDeuda(h){
-    if (h.pagada) return false;
+    if (boletaEstaPagada(h)) return false;
     var semanas = semanasDesdeCreacionBoleta(h);
     if (semanas < 1) return false;
     var ultimo = typeof h.recordatorioSemana === 'number' ? h.recordatorioSemana : 0;
@@ -1405,7 +1595,7 @@ return nuevo;
         mapa[key] = { nombre: nombre, boletas: [], total: 0 };
       }
       mapa[key].boletas.push(h);
-      mapa[key].total += isFinite(h.total) ? h.total : 0;
+      mapa[key].total += saldoPendienteBoleta(h);
     });
     return Object.keys(mapa).map(function(k){ return mapa[k]; })
       .sort(function(a, b){ return b.total - a.total; });
@@ -1483,7 +1673,7 @@ return nuevo;
 
   function boletasArchivadasAntiguasElegibles(){
     return historial.filter(function(h){
-      if (!h.pagada) return false;
+      if (!boletaEstaPagada(h)) return false;
       return diasDesdeFecha(fechaReferenciaArchivo(h)) >= LIMPIEZA_ARCHIVO_DIAS;
     }).sort(function(a, b){
       return new Date(fechaReferenciaArchivo(a)).getTime() - new Date(fechaReferenciaArchivo(b)).getTime();
@@ -1569,14 +1759,44 @@ return nuevo;
   window.marcarPagoHistorial = function(id, pagada){
     var h = buscarEnHistorial(id);
     if (!h) return;
-    h.pagada = !!pagada;
-    h.archivada = h.pagada;
-    if (h.pagada) h.pagadaEn = new Date().toISOString();
-    else delete h.pagadaEn;
+    if (pagada){
+      h.montoPagado = h.total || 0;
+      h.pagadaEn = new Date().toISOString();
+    } else {
+      h.montoPagado = 0;
+      delete h.pagadaEn;
+    }
+    sincronizarEstadoPagoBoleta(h);
     persistirLocalStorage();
     renderHistorial();
+    renderClientes();
     if (historialDetalleAbiertoId === id) verDetalleHistorial(id);
-    mostrarAviso(h.pagada ? 'Boleta pagada y archivada ✅' : 'Pago pendiente · boleta activa');
+    if (clienteDetalleAbiertoId) verDetalleCliente(clienteDetalleAbiertoId);
+    mostrarAviso(boletaEstaPagada(h) ? 'Boleta pagada y archivada ✅' : (boletaEsParcial(h) ? 'Quedó pago parcial' : 'Pago pendiente · boleta activa'));
+  };
+
+  window.registrarAbonoBoleta = function(id, monto){
+    var h = buscarEnHistorial(id);
+    if (!h) return;
+    monto = parseFloat(monto);
+    if (isNaN(monto) || monto <= 0){
+      mostrarAviso('Ingresá un monto de abono válido');
+      return;
+    }
+    var saldo = saldoPendienteBoleta(h);
+    if (monto > saldo + 0.004){
+      mostrarAviso('El abono no puede superar el saldo (' + money(saldo) + ')');
+      return;
+    }
+    h.montoPagado = montoPagadoBoleta(h) + monto;
+    if (boletaEstaPagada(h)) h.pagadaEn = new Date().toISOString();
+    sincronizarEstadoPagoBoleta(h);
+    persistirLocalStorage();
+    renderHistorial();
+    renderClientes();
+    if (historialDetalleAbiertoId === id) verDetalleHistorial(id);
+    if (clienteDetalleAbiertoId) verDetalleCliente(clienteDetalleAbiertoId);
+    mostrarAviso(boletaEstaPagada(h) ? 'Boleta saldada ✅' : ('Abono registrado · saldo ' + money(saldoPendienteBoleta(h))));
   };
 
   window.compartirDesdeHistorial = function(id){
@@ -1593,6 +1813,7 @@ return nuevo;
     historial = historial.filter(function(x){ return x.id !== id; });
     persistirLocalStorage();
     renderHistorial();
+    renderClientes();
     mostrarAviso('Boleta eliminada del historial');
   };
 
@@ -1619,6 +1840,7 @@ return nuevo;
           '<div class="row"><label>Cliente</label><span class="mono">' + clienteHtml + '</span></div>' +
           '<div class="row pago-detalle-row"><label>Pago</label>' + htmlPagoBoleta(h, 'historial-detalle-pagada') + '</div>' +
         '</div>' +
+        htmlPagoParcialDetalle(h) +
         '<div class="dashed"></div>' +
         '<div class="receipt-cols"><span>Producto</span><span>Cant.</span><span>P.Unit</span><span>Subt.</span></div>' +
         '<div class="receipt-items">' + lineasHtml + '</div>' +
@@ -1843,6 +2065,15 @@ return nuevo;
       });
     }
 
+    var btnCerrarCliente = document.getElementById('btn-cerrar-cliente');
+    var overlayCliente = document.getElementById('cliente-overlay');
+    if (btnCerrarCliente) btnCerrarCliente.addEventListener('click', cerrarDetalleCliente);
+    if (overlayCliente){
+      overlayCliente.addEventListener('click', function(ev){
+        if (ev.target === overlayCliente) cerrarDetalleCliente();
+      });
+    }
+
     var btnWppDetalle = document.getElementById('historial-detalle-wpp-btn');
     var btnReabrirDetalle = document.getElementById('historial-detalle-reabrir-btn');
     var btnEliminarDetalle = document.getElementById('historial-detalle-eliminar-btn');
@@ -1926,6 +2157,12 @@ return nuevo;
         case 'eliminar-categoria': eliminarCategoria(id); break;
         case 'editar-cliente': editarCliente(id); break;
         case 'eliminar-cliente': eliminarCliente(id); break;
+        case 'ver-cliente': verDetalleCliente(id); break;
+        case 'registrar-abono': {
+          var inputAbono = document.getElementById('historial-abono-input');
+          registrarAbonoBoleta(id, inputAbono ? inputAbono.value : 0);
+          break;
+        }
         case 'editar-producto': editarProducto(id); break;
         case 'eliminar-producto': eliminarProducto(id); break;
         case 'filtro-categoria': setFiltroCategoriaBoleta(btn.getAttribute('data-cat') || ''); break;

@@ -106,9 +106,14 @@
                 <input id="cl-nombre" type="text" placeholder="Ej: Juan Pérez">
               </div>
             </div>
+            <div class="field">
+              <label for="cl-notas">Notas (opcional)</label>
+              <textarea id="cl-notas" rows="2" placeholder="Ej: deja botellones en el portón, paga los viernes"></textarea>
+            </div>
             <div class="error-msg" id="cl-error"></div>
             <button type="submit" class="btn btn-ghost btn-block" id="cl-submit-btn">＋ Agregar cliente</button>
           </form>
+          <div id="clientes-cobranza-resumen" class="clientes-cobranza-resumen"></div>
           <div id="lista-clientes-wrap" style="margin-top:12px;"></div>
         </div>
         </div>
@@ -239,6 +244,14 @@
         <button class="btn btn-ghost" id="historial-detalle-reabrir-btn">↩️ Reabrir como boleta actual</button>
         <button class="btn btn-icon danger" id="historial-detalle-eliminar-btn" title="Eliminar del historial" style="width:auto; padding:10px 14px;">🗑️</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ===================== MODAL DETALLE DE CLIENTE ===================== -->
+  <div class="historial-detalle-overlay" id="cliente-overlay">
+    <div class="historial-detalle-card cliente-detalle-card">
+      <div class="historial-detalle-close"><button type="button" id="btn-cerrar-cliente" aria-label="Cerrar">✕</button></div>
+      <div class="historial-detalle-body" id="cliente-detalle-body"></div>
     </div>
   </div>
 

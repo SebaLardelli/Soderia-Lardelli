@@ -191,11 +191,12 @@
 
   .field{ margin-bottom:12px; }
   .field label{ display:block; font-size:12px; font-weight:700; color:var(--ink-soft); margin-bottom:5px; text-transform:uppercase; letter-spacing:.03em; }
-  .field input, .field select{
+  .field input, .field select, .field textarea{
     width:100%; padding:10px 11px; border:1.5px solid var(--line); border-radius:8px;
     background:#fff; color:var(--ink); transition:border-color .12s ease, box-shadow .12s ease;
   }
-  .field input:focus, .field select:focus{
+  .field textarea{ min-height:72px; resize:vertical; font-family:var(--font-body); line-height:1.4; }
+  .field input:focus, .field select:focus, .field textarea:focus{
     border-color:var(--ink-soft); box-shadow:0 0 0 3px rgba(18,48,82,.12);
   }
   .field input.field-invalid, .receipt-meta input.field-invalid{
@@ -312,10 +313,68 @@
     font-size:11px; font-weight:700;
   }
   .pago-badge.pendiente{ background:#fff4e5; color:#9a5b00; }
+  .pago-badge.parcial{ background:#eef3ff; color:#2b4ea2; }
   .pago-badge.pagada{ background:#e8f7ee; color:#1f7a3f; }
   .historial-item.archivada{ opacity:.82; background:#fafafa; }
   .historial-item.archivada:hover{ opacity:1; }
   .pago-detalle-row .pago-check{ font-size:13px; }
+
+  .clientes-cobranza-resumen{
+    margin-top:12px; padding:10px 12px; border-radius:var(--radius); font-size:13px;
+    background:var(--paper); border:1px solid var(--line); color:var(--muted);
+  }
+  .clientes-cobranza-resumen.show{
+    border-color:#f0c987; background:#fff8ed; color:#7a4d00;
+  }
+  .clientes-cobranza-resumen strong{ color:var(--ink); }
+
+  .cliente-item{ align-items:flex-start !important; }
+  .cliente-item-main{ flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; }
+  .cliente-nota-preview{
+    font-size:11.5px; color:var(--muted); line-height:1.35;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .cliente-saldo{ font-size:12px; font-weight:700; }
+  .cliente-saldo.deuda{ color:#b45309; }
+  .cliente-saldo.al-dia{ color:#1f7a3f; }
+
+  .cliente-detalle-card{ max-width:520px; }
+  .cliente-detalle-head h3{ margin:0 0 8px; font-family:var(--font-display); }
+  .cliente-detalle-notas{ margin:0 0 14px; font-size:13.5px; line-height:1.45; color:var(--ink); }
+  .cliente-detalle-notas.muted{ color:var(--muted); font-style:italic; }
+  .cliente-detalle-stats{
+    display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px; margin-bottom:16px;
+  }
+  .cliente-detalle-stats > div{
+    padding:10px; border:1px solid var(--line); border-radius:var(--radius); background:var(--paper);
+    display:flex; flex-direction:column; gap:4px;
+  }
+  .cliente-detalle-stats span{ font-size:11px; color:var(--muted); }
+  .cliente-detalle-stats strong{ font-size:15px; }
+  .cliente-detalle-stats .deuda{ color:#b45309; }
+  .cliente-detalle-stats .al-dia{ color:#1f7a3f; }
+  .cliente-historial-titulo{ margin:0 0 10px; font-size:14px; }
+  .cliente-historial-lista{ display:flex; flex-direction:column; gap:8px; max-height:42vh; overflow:auto; }
+  .cliente-historial-item{
+    padding:10px 12px; border:1px solid var(--line); border-radius:var(--radius); background:var(--paper);
+  }
+  .cliente-historial-meta{
+    display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:6px;
+  }
+  .cliente-historial-acciones{ margin-top:8px; }
+  .btn-sm{ padding:7px 10px; font-size:12px; }
+
+  .pago-parcial-box{
+    margin-top:10px; padding:10px 12px; border:1px dashed var(--line); border-radius:var(--radius);
+    background:var(--paper);
+  }
+  .pago-parcial-form{
+    display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;
+  }
+  .pago-parcial-form input{
+    flex:1; min-width:120px; padding:8px 10px; border:1px solid var(--line); border-radius:var(--radius);
+  }
+  .saldo-parcial small{ display:block; font-size:11px; color:var(--muted); font-weight:500; }
 
   .recordatorio-deudas-overlay{
     display:none; position:fixed; inset:0; z-index:1200; background:rgba(20,30,40,.45);
