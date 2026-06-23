@@ -383,34 +383,35 @@
     display:flex; flex-direction:column; gap:6px;
     width:100%; max-width:100%; min-width:0; box-sizing:border-box;
   }
-  .clientes-scroll .cliente-item{
-    display:grid;
-    grid-template-columns:minmax(0, 1fr) auto;
+  .clientes-scroll .cat-item.cliente-item{
+    display:flex !important;
     align-items:center;
     gap:6px 8px;
+    padding:8px 10px;
   }
   .clientes-scroll .cliente-item .cliente-nombre-cell{
-    display:flex; align-items:flex-start; gap:4px;
-    min-width:0;
-    grid-column:1;
+    display:flex; align-items:center; gap:4px;
+    flex:1 1 auto; min-width:0;
   }
   .clientes-scroll .cliente-item .nombre{
     flex:1; min-width:0;
-    white-space:normal !important; word-break:break-word; overflow:visible !important;
-    text-overflow:clip !important; line-height:1.25;
+    font-weight:600; font-size:13.5px; line-height:1.2;
+    white-space:normal !important; word-break:break-word; overflow:hidden;
+    text-overflow:clip !important;
+    display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2;
   }
   .clientes-scroll .cliente-nota-pin{
-    flex:0 0 auto; font-size:12px; line-height:1.2; opacity:.8; margin-top:1px;
+    flex:0 0 auto; font-size:12px; line-height:1; opacity:.8;
   }
   .clientes-scroll .cliente-item .cliente-item-derecha{
-    grid-column:2;
-    display:flex; align-items:center; gap:4px 6px;
-    flex-shrink:0;
+    display:flex; align-items:center; gap:6px;
+    flex:0 0 auto;
   }
   .clientes-scroll .cliente-item .cliente-saldo-badge{
     flex:0 0 auto;
+    min-width:42px;
     font-family:var(--font-mono); font-size:10px; font-weight:600;
-    white-space:nowrap; line-height:1.1;
+    white-space:nowrap; line-height:1.2;
     padding:0; border-radius:0; background:none;
     text-align:right;
   }
@@ -420,8 +421,8 @@
   }
   .clientes-scroll .cliente-item .cliente-saldo-badge.deuda{ color:#b45309; }
   .clientes-scroll .cliente-item .acciones{
-    flex-wrap:nowrap;
-    flex-shrink:0;
+    display:flex; align-items:center; gap:4px;
+    flex:0 0 auto; flex-wrap:nowrap;
   }
   .cliente-notas-titulo{
     margin:0 0 8px; font-size:12px; font-weight:800; letter-spacing:.06em;
@@ -1295,21 +1296,6 @@
 
     .cliente-item-wrap{ gap:6px; }
 
-    .clientes-scroll .cliente-item{
-      grid-template-columns:1fr;
-      grid-template-rows:auto auto;
-      align-items:stretch;
-      gap:4px 0;
-    }
-    .clientes-scroll .cliente-item .cliente-nombre-cell{
-      grid-column:1; grid-row:1;
-      width:100%;
-    }
-    .clientes-scroll .cliente-item .cliente-item-derecha{
-      grid-column:1; grid-row:2;
-      width:100%;
-      justify-content:flex-end;
-    }
     .clientes-scroll .cliente-item .acciones .btn-icon{
       width:28px; height:28px; font-size:13px;
     }
