@@ -90,19 +90,6 @@
     if (max >= contadorBoleta) contadorBoleta = max + 1;
   }
 
-  window.resetearNumeracionBoletas = function(){
-    var msg = 'La próxima boleta nueva va a ser N° 0001.';
-    if (historial.length > 0){
-      msg += '\n\nLas boletas del historial no se borran. Si dejaste una de prueba, eliminala desde el historial (🗑️) para no repetir el número.';
-    }
-    if (!confirm(msg + '\n\n¿Resetear la numeración?')) return;
-    contadorBoleta = 1;
-    contadorBoletaManual = true;
-    actualizarNumeroBoleta();
-    persistirLocalStorage();
-    mostrarAviso('Próxima boleta: N° 0001');
-  };
-
   function hayBoletaPendiente(){
     return calcularBoleta().lineas.length > 0;
   }
@@ -2746,11 +2733,9 @@ return nuevo;
     var buscador = document.getElementById('buscador');
     var buscadorCatalogo = document.getElementById('buscador-catalogo');
     var buscadorHistorial = document.getElementById('buscador-historial');
-    var btnResetNumeracion = document.getElementById('btn-reset-numeracion');
     if (buscador) buscador.addEventListener('input', renderListaBoleta);
     if (buscadorCatalogo) buscadorCatalogo.addEventListener('input', renderProductos);
     if (buscadorHistorial) buscadorHistorial.addEventListener('input', renderHistorial);
-    if (btnResetNumeracion) btnResetNumeracion.addEventListener('click', resetearNumeracionBoletas);
 
     document.body.addEventListener('keydown', function(ev){
       if (ev.key !== 'Enter') return;
