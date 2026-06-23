@@ -1607,6 +1607,26 @@ return nuevo;
     boletaImpresa = true;
   };
 
+  window.imprimirBoletaHistorial = function(id){
+    var h = buscarEnHistorial(id);
+    if (!h) return;
+    var datos = {
+      negocio: h.negocio || 'Boleta',
+      numero: h.numero,
+      fecha: h.fecha,
+      cliente: h.cliente || '',
+      lineas: h.lineas || [],
+      subtotal: h.subtotal,
+      descuentoMonto: h.descuentoMonto || 0,
+      total: h.total
+    };
+    var doble = document.getElementById('print-doble');
+    if (!doble) return;
+    doble.innerHTML = construirReceiptEstatico(datos, 'Comprobante');
+    window.print();
+    mostrarAviso('Comprobante listo para imprimir 🖨️');
+  };
+
   /* ===================== formateo de texto para WhatsApp ===================== */
   function textoBoletaParaWhatsapp(datos){
     // datos: { negocio, numero, fecha, cliente, lineas, subtotal, descuentoMonto, total }
@@ -1760,13 +1780,15 @@ return nuevo;
       '</div>' +
       htmlListaAbonosBoleta(h) +
       '<div class="pago-parcial-form">' +
-        '<div class="pago-parcial-field">' +
-          '<label for="historial-abono-fecha">Fecha del abono</label>' +
-          '<input type="date" id="historial-abono-fecha" value="' + hoyISO() + '" aria-label="Fecha del abono">' +
-        '</div>' +
-        '<div class="pago-parcial-field">' +
-          '<label for="historial-abono-input">Monto</label>' +
-          '<input type="number" id="historial-abono-input" min="0.01" step="0.01" max="' + saldo + '" placeholder="Cuánto te abonó" aria-label="Monto del abono">' +
+        '<div class="pago-parcial-form-campos">' +
+          '<div class="pago-parcial-field">' +
+            '<label for="historial-abono-fecha">Fecha del abono</label>' +
+            '<input type="date" id="historial-abono-fecha" value="' + hoyISO() + '" aria-label="Fecha del abono">' +
+          '</div>' +
+          '<div class="pago-parcial-field pago-parcial-field-monto">' +
+            '<label for="historial-abono-input">Monto del abono</label>' +
+            '<input type="number" id="historial-abono-input" class="mono" min="0.01" step="0.01" max="' + saldo + '" placeholder="Ej: 5000" aria-label="Monto del abono">' +
+          '</div>' +
         '</div>' +
         '<button type="button" class="btn btn-primary pago-parcial-btn" data-action="registrar-abono" data-id="' + escapeHtml(h.id) + '">Registrar pago parcial</button>' +
       '</div>' +
@@ -2385,12 +2407,18 @@ return nuevo;
     }
 
     var btnWppDetalle = document.getElementById('historial-detalle-wpp-btn');
+    var btnImprimirDetalle = document.getElementById('historial-detalle-imprimir-btn');
     var btnReabrirDetalle = document.getElementById('historial-detalle-reabrir-btn');
     var btnEliminarDetalle = document.getElementById('historial-detalle-eliminar-btn');
     var btnActualizarPreciosDetalle = document.getElementById('historial-detalle-actualizar-precios-btn');
     if (btnWppDetalle){
       btnWppDetalle.addEventListener('click', function(){
         if (historialDetalleAbiertoId) compartirDesdeHistorial(historialDetalleAbiertoId);
+      });
+    }
+    if (btnImprimirDetalle){
+      btnImprimirDetalle.addEventListener('click', function(){
+        if (historialDetalleAbiertoId) imprimirBoletaHistorial(historialDetalleAbiertoId);
       });
     }
     if (btnReabrirDetalle){

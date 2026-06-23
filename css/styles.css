@@ -295,7 +295,13 @@
     flex:0 0 auto; text-align:right; font-family:var(--font-mono); font-size:17px;
     font-weight:700; color:var(--ink); min-width:96px;
   }
-  .historial-item .acciones{ flex:0 0 auto; display:flex; gap:6px; }
+  .historial-item .acciones{
+    flex:0 0 auto; display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;
+    max-width:100%;
+  }
+  .historial-item .acciones .btn-icon{
+    width:36px; height:36px; flex:0 0 auto;
+  }
 
   .historial-seccion-titulo{
     margin:18px 0 10px; font-family:var(--font-display); font-size:14px; font-weight:700; color:var(--ink);
@@ -500,16 +506,26 @@
   .pago-abono-monto{ font-weight:700; color:var(--ink); }
   .pago-abono-fecha{ color:var(--muted); font-size:12px; }
   .pago-parcial-form{
-    display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr) auto; gap:8px;
-    align-items:end; margin-top:4px;
+    display:flex; flex-direction:column; gap:12px; margin-top:4px;
   }
-  .pago-parcial-field{ display:flex; flex-direction:column; gap:4px; min-width:0; }
-  .pago-parcial-field label{ font-size:11px; font-weight:700; color:var(--muted); }
+  .pago-parcial-form-campos{
+    display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); gap:12px;
+  }
+  .pago-parcial-field{ display:flex; flex-direction:column; gap:6px; min-width:0; }
+  .pago-parcial-field label{
+    font-size:12px; font-weight:700; color:var(--ink-soft);
+    text-transform:uppercase; letter-spacing:.03em;
+  }
   .pago-parcial-form input{
-    width:100%; min-width:0; padding:9px 10px; border:1px solid var(--line); border-radius:8px;
-    background:#fff; font-size:14px; box-sizing:border-box;
+    width:100%; min-width:0; padding:10px 12px; border:1.5px solid var(--line); border-radius:8px;
+    background:#fff; font-size:15px; box-sizing:border-box; color:var(--ink);
+    transition:border-color .12s ease, box-shadow .12s ease;
   }
-  .pago-parcial-btn{ white-space:nowrap; align-self:end; }
+  .pago-parcial-form input:focus{
+    outline:none; border-color:var(--gold); box-shadow:0 0 0 3px rgba(26,77,140,.12);
+  }
+  .pago-parcial-field-monto input{ font-family:var(--font-mono); font-size:16px; font-weight:600; }
+  .pago-parcial-btn{ width:100%; justify-content:center; padding:11px 16px; font-size:14px; }
   .pago-parcial-nota{
     margin:10px 0 0; font-size:11.5px; color:var(--muted); line-height:1.4;
   }
@@ -569,6 +585,22 @@
     box-shadow:0 28px 64px rgba(0,0,0,.35); animation:pop .18s ease;
   }
   @keyframes pop{ from{ opacity:0; transform:translateY(8px) scale(.97); } to{ opacity:1; transform:none; } }
+
+  @media (min-width: 881px){
+    .historial-detalle-card{ max-width:460px; }
+    .historial-detalle-body{ padding:0 20px 18px; }
+    .historial-detalle-acciones{ padding:0 20px 20px; gap:10px; }
+    .historial-toolbar{ align-items:center; }
+    .historial-item{ flex-wrap:nowrap; }
+    .historial-item .acciones{ flex-wrap:nowrap; }
+    .pago-parcial-box{ padding:14px 16px; margin:12px 0; }
+    .pago-parcial-resumen{ gap:10px; margin-bottom:12px; }
+    .pago-parcial-stat{ padding:10px 12px; }
+    .pago-parcial-stat strong{ font-size:16px; }
+    .pago-parcial-form-campos{ gap:14px; }
+    .pago-parcial-field label{ font-size:12.5px; }
+    .pago-parcial-form input{ padding:11px 12px; min-height:44px; }
+  }
 
   .save-bar{
     position:sticky; bottom:14px; margin-top:18px;
@@ -811,8 +843,15 @@
   .historial-detalle-close button:hover{ background:var(--paper); color:var(--ink); }
   .historial-detalle-body{ padding:0 18px 18px; }
   .historial-detalle-body .receipt-card{ box-shadow:none; padding-top:0; }
-  .historial-detalle-acciones{ display:flex; gap:8px; padding:0 18px 18px; flex-wrap:wrap; }
-  .historial-detalle-acciones .btn{ flex:1; min-width:110px; }
+  .historial-detalle-acciones{
+    display:flex; flex-direction:column; gap:8px;
+    padding:0 18px 18px; align-items:stretch;
+  }
+  .historial-detalle-acciones .btn,
+  .historial-detalle-acciones .btn-icon{
+    width:100%; min-width:0; justify-content:center;
+  }
+  .historial-detalle-acciones .btn-icon.danger{ padding:10px 14px; height:auto; }
 
   /* ---------- toast ---------- */
   .aviso{
@@ -990,11 +1029,17 @@
     .unsaved-banner .msg{ min-width:0; }
     .unsaved-banner .btn{ width:100%; text-align:center; font-size:12px; }
 
+    .historial-toolbar{ flex-direction:column; align-items:stretch; gap:10px; }
+    .historial-toolbar h2{ width:100%; }
     .historial-toolbar .search-row{ min-width:0; }
     .historial-item{ flex-wrap:wrap; padding:12px; gap:10px; }
     .historial-item .monto{ order:3; text-align:left; min-width:0; font-size:15px; }
-    .historial-item .acciones{ order:4; width:100%; }
-    .historial-item .acciones .btn{ flex:1; font-size:12px; padding:8px 10px; }
+    .historial-item .acciones{
+      order:4; width:100%; justify-content:stretch; gap:8px;
+    }
+    .historial-item .acciones .btn-icon{
+      flex:1 1 0; width:auto; min-width:0; max-width:none; height:42px; font-size:16px;
+    }
 
     .btn{ font-size:13px; padding:9px 14px; }
     .field input, .field select{ padding:9px 10px; font-size:14px; }
@@ -1068,8 +1113,6 @@
     }
     .historial-detalle-body,
     .historial-detalle-acciones{ padding-left:14px; padding-right:14px; }
-    .historial-detalle-acciones{ flex-direction:column; }
-    .historial-detalle-acciones .btn{ width:100%; min-width:0; justify-content:center; }
 
     .cliente-detalle-head h3{
       font-size:18px; line-height:1.25; word-break:break-word;
@@ -1124,8 +1167,9 @@
 
     .pago-parcial-box{ padding:10px; }
     .pago-parcial-resumen{ grid-template-columns:1fr 1fr; }
-    .pago-parcial-form{
-      grid-template-columns:1fr; align-items:stretch;
+    .pago-parcial-form-campos{ grid-template-columns:1fr; gap:10px; }
+    .pago-parcial-form input{
+      font-size:16px; min-height:44px;
     }
     .pago-parcial-btn{ width:100%; justify-content:center; }
 
@@ -1169,6 +1213,8 @@
       width:100%; text-align:left; padding-top:6px; margin-top:2px;
       border-top:1px dashed var(--line-soft);
     }
+
+    .historial-item .acciones .btn-icon{ height:40px; font-size:15px; }
 
     .recordatorio-deudas-card h3{ font-size:17px; }
     .recordatorio-deuda-cliente{ font-size:13px; }
