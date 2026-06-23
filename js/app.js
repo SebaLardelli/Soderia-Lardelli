@@ -556,6 +556,13 @@
     return c;
   }
 
+  function indicadorNotasCliente(c){
+    var notas = c.recordatorios || [];
+    if (notas.length === 0) return '';
+    var hint = notas.map(function(n){ return n.texto; }).join(' · ');
+    return '<span class="cliente-nota-pin" title="' + escapeHtml(hint) + '" aria-label="Tiene notas">📌</span>';
+  }
+
   function htmlNotasCliente(c, opts){
     opts = opts || {};
     var notas = (c.recordatorios || []);
@@ -1286,13 +1293,15 @@ return nuevo;
       } else {
         wrap.innerHTML = '<div class="cat-lista">' + clientes.slice().sort(function(a,b){ return a.nombre.localeCompare(b.nombre); }).map(function(c){
           var saldo = saldoClientePorNombre(c.nombre);
-          var notasHtml = htmlNotasCliente(c, { compact: true });
           var saldoHtml = saldo > 0.004
-            ? '<span class="cliente-saldo cliente-saldo-badge deuda">Debe ' + money(saldo) + '</span>'
+            ? '<span class="cliente-saldo cliente-saldo-badge deuda" title="Debe ' + money(saldo) + '">' + money(saldo) + '</span>'
             : '<span class="cliente-saldo cliente-saldo-badge al-dia">Al día</span>';
           return '<div class="cliente-item-wrap">' +
             '<div class="cat-item cliente-item">' +
-              '<span class="nombre">' + escapeHtml(c.nombre) + '</span>' +
+              '<span class="cliente-nombre-cell">' +
+                '<span class="nombre">' + escapeHtml(c.nombre) + '</span>' +
+                indicadorNotasCliente(c) +
+              '</span>' +
               saldoHtml +
               '<span class="acciones">' +
                 '<button type="button" class="btn-icon" title="Agregar nota" data-action="agregar-nota-cliente" data-id="' + escapeHtml(c.id) + '">📝</button>' +
@@ -1301,7 +1310,6 @@ return nuevo;
                 '<button type="button" class="btn-icon danger" title="Eliminar" data-action="eliminar-cliente" data-id="' + escapeHtml(c.id) + '">🗑️</button>' +
               '</span>' +
             '</div>' +
-            notasHtml +
           (clienteNotaAbiertoId === c.id ? htmlFormNotaCliente(c) : '') +
           '</div>';
         }).join('') + '</div>';
