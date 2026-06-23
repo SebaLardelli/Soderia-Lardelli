@@ -328,28 +328,35 @@
   }
   .clientes-cobranza-resumen strong{ color:var(--ink); }
 
-  .cliente-item-wrap{ display:flex; flex-direction:column; gap:8px; }
+  .cliente-item-wrap{
+    display:flex; flex-direction:column; gap:8px;
+    width:100%; max-width:100%; min-width:0; box-sizing:border-box;
+  }
   .cliente-item{
     flex-direction:column; align-items:stretch !important; gap:8px;
+    width:100%; max-width:100%; min-width:0; box-sizing:border-box;
   }
   .cliente-item-head{
-    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    display:grid; grid-template-columns:minmax(0, 1fr) auto;
+    align-items:center; gap:8px 10px;
     width:100%; min-width:0;
   }
   .cliente-item-head .nombre{
-    flex:1; min-width:0; white-space:normal; word-break:break-word;
+    min-width:0; white-space:normal; word-break:break-word;
     overflow:visible; text-overflow:clip;
+    font-weight:600; font-size:13.5px; color:var(--ink);
   }
   .cliente-item-head .acciones{
-    flex:0 0 auto; display:flex; gap:4px;
+    display:flex; gap:4px; flex-wrap:nowrap; justify-content:flex-end;
   }
   .cliente-notas-titulo{
     margin:0 0 8px; font-size:12px; font-weight:800; letter-spacing:.06em;
     text-transform:uppercase; color:var(--gold);
   }
   .cliente-notas-block{
-    margin-top:6px; padding:9px 10px 10px;
-    border-radius:var(--radius); width:100%;
+    margin-top:2px; padding:8px 10px 9px;
+    border-radius:var(--radius); width:100%; max-width:100%; min-width:0;
+    box-sizing:border-box; align-self:stretch;
     background:linear-gradient(135deg, #fffbeb 0%, var(--highlight) 100%);
     border:1px solid #f0dcc0; border-left:4px solid var(--gold);
     box-shadow:0 2px 8px rgba(26,77,140,.07);
@@ -359,41 +366,53 @@
     color:var(--gold); margin-bottom:7px;
   }
   .cliente-nota-form{
-    display:flex; flex-direction:column; gap:8px; padding:12px 14px;
+    display:flex; flex-direction:row; flex-wrap:wrap; align-items:center; gap:8px;
+    padding:10px 12px; width:100%; max-width:100%; box-sizing:border-box;
     border:1.5px dashed var(--gold); border-radius:var(--radius);
     background:linear-gradient(180deg, #fffdf8 0%, #fff8ed 100%);
     box-shadow:0 2px 8px rgba(26,77,140,.06);
   }
   .cliente-nota-input{
-    width:100%; padding:10px 12px; border:1.5px solid #e8dcc8; border-radius:8px;
+    flex:1 1 140px; min-width:0; width:auto;
+    padding:9px 11px; border:1.5px solid #e8dcc8; border-radius:8px;
     background:#fff; color:var(--ink); font-size:14px;
   }
   .cliente-nota-input:focus{
     outline:none; border-color:var(--gold); box-shadow:0 0 0 3px rgba(26,77,140,.12);
   }
-  .cliente-nota-form-acciones{ display:flex; gap:8px; flex-wrap:wrap; }
-  .cliente-nota-form-acciones .btn{ flex:1; min-width:100px; }
-  .cliente-notas-lista{ display:flex; flex-direction:column; gap:7px; width:100%; }
-  .cliente-notas-lista--detalle{ width:100%; }
+  .cliente-nota-form-acciones{
+    display:flex; gap:8px; flex:0 0 auto; flex-wrap:nowrap;
+  }
+  .cliente-nota-form-acciones .btn{ flex:0 0 auto; min-width:88px; }
+  .cliente-notas-lista{
+    display:flex; flex-direction:column; gap:6px;
+    width:100%; max-width:100%; min-width:0;
+  }
+  .cliente-notas-lista--detalle{ width:100%; max-width:100%; }
   .cliente-nota-chip{
-    display:flex; flex-direction:row; align-items:center; gap:8px;
-    width:100%; min-width:0; padding:8px 10px;
+    display:grid;
+    grid-template-columns:auto minmax(0, 1fr) auto;
+    align-items:center; column-gap:8px;
+    width:100%; max-width:100%; min-width:0; box-sizing:border-box;
+    padding:7px 10px;
     border:1px solid #f0dcc0; border-radius:9px;
     background:#fff; box-shadow:0 1px 3px rgba(11,36,71,.06);
   }
   .cliente-nota-icon{
-    flex:0 0 auto; font-size:13px; line-height:1; opacity:.85;
+    grid-column:1; font-size:13px; line-height:1; opacity:.85;
   }
   .cliente-nota-texto{
-    flex:1; min-width:0;
+    grid-column:2; min-width:0; max-width:100%;
     font-family:var(--font-body); font-size:14px; font-weight:600;
     color:var(--ink); line-height:1.35;
-    word-break:normal; overflow-wrap:break-word;
-    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+    word-break:normal; overflow-wrap:break-word; hyphens:none;
+    white-space:normal;
     overflow:hidden;
+    display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2;
   }
   .cliente-nota-borrar{
-    flex:0 0 auto; width:26px; height:26px; border:1px solid #eadfce;
+    grid-column:3;
+    width:26px; height:26px; border:1px solid #eadfce;
     border-radius:999px; background:#fff; color:var(--muted);
     cursor:pointer; font-size:13px; font-weight:700; line-height:1;
     display:flex; align-items:center; justify-content:center;
@@ -409,7 +428,7 @@
     box-shadow:0 2px 10px rgba(26,77,140,.08);
     display:flex; flex-direction:column; gap:10px; align-items:stretch;
   }
-  .cliente-saldo{ font-size:12px; font-weight:700; }
+  .cliente-saldo{ font-size:12px; font-weight:700; width:100%; }
   .cliente-saldo.deuda{ color:#b45309; }
   .cliente-saldo.al-dia{ color:#1f7a3f; }
 
@@ -965,24 +984,30 @@
 
     .cliente-item{ padding:10px 10px 8px; }
 
+    .cliente-item-head{
+      grid-template-columns:minmax(0, 1fr) auto;
+      gap:6px 8px;
+    }
     .cliente-item-head .acciones .btn-icon{
-      width:36px; height:36px; font-size:15px;
+      width:34px; height:34px; font-size:15px;
     }
 
     .cliente-notas-block{
-      padding:8px 9px 9px; border-left-width:3px; box-sizing:border-box;
+      padding:8px 9px 9px; border-left-width:3px;
     }
-    .cliente-nota-borrar{ width:30px; height:30px; flex-shrink:0; }
+    .cliente-nota-chip{
+      column-gap:7px; padding:7px 9px;
+    }
+    .cliente-nota-borrar{ width:28px; height:28px; }
 
     .cliente-nota-form{
-      padding:10px 12px; width:100%; box-sizing:border-box;
-    }
-    .cliente-nota-form-acciones{
       flex-direction:column; align-items:stretch;
     }
-    .cliente-nota-form-acciones .btn{
-      width:100%; min-width:0; justify-content:center;
+    .cliente-nota-input{ flex:1 1 auto; width:100%; }
+    .cliente-nota-form-acciones{
+      width:100%; justify-content:stretch;
     }
+    .cliente-nota-form-acciones .btn{ flex:1; min-width:0; justify-content:center; }
 
     .cliente-saldo{ font-size:13px; }
 
@@ -1078,6 +1103,13 @@
     .cat-filtro-btn{ padding:5px 10px; font-size:11.5px; }
 
     .cliente-notas-etiqueta{ font-size:9px; }
+
+    .cliente-item-head{
+      grid-template-columns:1fr;
+    }
+    .cliente-item-head .acciones{
+      width:100%; justify-content:flex-end;
+    }
     .cliente-detalle-stats{ grid-template-columns:1fr; }
     .cliente-detalle-stats > div:last-child{ grid-column:auto; }
 
