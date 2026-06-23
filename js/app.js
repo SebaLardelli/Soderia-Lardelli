@@ -304,15 +304,23 @@
     return c;
   }
 
-  function htmlNotasCliente(c){
+  function htmlNotasCliente(c, opts){
+    opts = opts || {};
     var notas = (c.recordatorios || []);
     if (notas.length === 0) return '';
-    return '<div class="cliente-notas-lista">' + notas.map(function(n){
+    var chips = notas.map(function(n){
       return '<div class="cliente-nota-chip">' +
+        '<span class="cliente-nota-icon" aria-hidden="true">📌</span>' +
         '<span class="cliente-nota-texto">' + escapeHtml(n.texto) + '</span>' +
         '<button type="button" class="cliente-nota-borrar" title="Quitar nota" data-action="eliminar-nota-cliente" data-id="' + escapeHtml(c.id) + '" data-nota-id="' + escapeHtml(n.id) + '">✕</button>' +
       '</div>';
-    }).join('') + '</div>';
+    }).join('');
+    var lista = '<div class="cliente-notas-lista' + (opts.detalle ? ' cliente-notas-lista--detalle' : '') + '">' + chips + '</div>';
+    if (opts.detalle) return lista;
+    return '<div class="cliente-notas-block">' +
+      '<div class="cliente-notas-etiqueta">Notas</div>' +
+      lista +
+    '</div>';
   }
 
   function htmlFormNotaCliente(c, inputId){
@@ -941,7 +949,7 @@ return nuevo;
     var boletas = historialDelCliente(c.nombre);
     var saldo = saldoClientePorNombre(c.nombre);
     var totalComprado = boletas.reduce(function(acc, h){ return acc + (isFinite(h.total) ? h.total : 0); }, 0);
-    var notasHtml = htmlNotasCliente(c);
+    var notasHtml = htmlNotasCliente(c, { detalle: true });
     var sinNotas = !(c.recordatorios && c.recordatorios.length);
 
     var historialHtml = boletas.length === 0
