@@ -334,7 +334,7 @@
   .pago-detalle-row .pago-check{ font-size:13px; }
 
   .clientes-cobranza-resumen{
-    margin-top:12px; padding:10px 12px; border-radius:var(--radius); font-size:13px;
+    margin-top:8px; padding:7px 10px; border-radius:var(--radius); font-size:12px; line-height:1.35;
     background:var(--paper); border:1px solid var(--line); color:var(--muted);
   }
   .clientes-cobranza-resumen.show{
@@ -342,13 +342,52 @@
   }
   .clientes-cobranza-resumen strong{ color:var(--ink); }
 
+  #card-clientes{
+    padding:16px 16px 12px;
+  }
+  #card-clientes h2{
+    margin-bottom:10px; font-size:16px;
+  }
+  #card-clientes #form-cliente .field{
+    margin-bottom:8px;
+  }
+  #card-clientes #form-cliente .field label{
+    font-size:11px; margin-bottom:3px; letter-spacing:.04em;
+  }
+  #card-clientes #form-cliente .field input{
+    padding:8px 10px; font-size:14px;
+  }
+  #card-clientes #form-cliente .error-msg{
+    margin-top:-4px; margin-bottom:6px; min-height:14px; font-size:12px;
+  }
+  #card-clientes #cl-submit-btn{
+    padding:8px 12px; font-size:13px;
+  }
+  #card-clientes .editing-banner{
+    margin-bottom:8px; padding:7px 10px; font-size:12px;
+  }
+
+  .clientes-scroll{
+    max-height:min(22vh, 128px);
+    margin-top:8px;
+    border:1px solid var(--line-soft);
+    border-radius:9px;
+    background:var(--paper);
+    padding:2px 4px;
+  }
+  .clientes-scroll .empty-state{
+    padding:10px 8px; font-size:13px; line-height:1.4;
+  }
+  .clientes-scroll .cat-lista{ gap:4px; }
+
   .cliente-item-wrap{
-    display:flex; flex-direction:column; gap:8px;
+    display:flex; flex-direction:column; gap:6px;
     width:100%; max-width:100%; min-width:0; box-sizing:border-box;
   }
   .cliente-item{
-    flex-direction:column; align-items:stretch !important; gap:8px;
+    flex-direction:column; align-items:stretch !important; gap:6px;
     width:100%; max-width:100%; min-width:0; box-sizing:border-box;
+    padding:7px 8px 6px;
   }
   .cliente-item-head{
     display:grid; grid-template-columns:minmax(0, 1fr) auto;
@@ -358,18 +397,21 @@
   .cliente-item-head .nombre{
     min-width:0; white-space:normal; word-break:break-word;
     overflow:visible; text-overflow:clip;
-    font-weight:600; font-size:13.5px; color:var(--ink);
+    font-weight:600; font-size:13px; color:var(--ink);
   }
   .cliente-item-head .acciones{
-    display:flex; gap:4px; flex-wrap:nowrap; justify-content:flex-end;
+    display:flex; gap:3px; flex-wrap:nowrap; justify-content:flex-end;
+  }
+  .cliente-item-head .acciones .btn-icon{
+    width:28px; height:28px; font-size:13px;
   }
   .cliente-notas-titulo{
     margin:0 0 8px; font-size:12px; font-weight:800; letter-spacing:.06em;
     text-transform:uppercase; color:var(--gold);
   }
   .cliente-notas-block{
-    margin-top:2px; padding:8px 10px 9px;
-    border-radius:var(--radius); width:100%; max-width:100%; min-width:0;
+    margin-top:0; padding:6px 8px 7px;
+    border-radius:8px; width:100%; max-width:100%; min-width:0;
     box-sizing:border-box; align-self:stretch;
     background:linear-gradient(135deg, var(--nota-bg) 0%, var(--nota-bg-end) 100%);
     border:1px solid var(--nota-border); border-left:4px solid var(--gold);
@@ -406,9 +448,9 @@
   .cliente-nota-chip{
     display:grid;
     grid-template-columns:auto minmax(0, 1fr) auto;
-    align-items:center; column-gap:8px;
+    align-items:center; column-gap:6px;
     width:100%; max-width:100%; min-width:0; box-sizing:border-box;
-    padding:7px 10px;
+    padding:5px 8px;
     border:1px solid var(--line-soft); border-radius:9px;
     background:var(--nota-chip-bg); box-shadow:0 1px 3px rgba(11,36,71,.04);
   }
@@ -417,16 +459,16 @@
   }
   .cliente-nota-texto{
     grid-column:2; min-width:0; max-width:100%;
-    font-family:var(--font-body); font-size:14px; font-weight:600;
-    color:var(--ink); line-height:1.35;
+    font-family:var(--font-body); font-size:13px; font-weight:600;
+    color:var(--ink); line-height:1.3;
     word-break:normal; overflow-wrap:break-word; hyphens:none;
     white-space:normal;
     overflow:hidden;
-    display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2;
+    display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:1;
   }
   .cliente-nota-borrar{
     grid-column:3;
-    width:26px; height:26px; border:1px solid var(--line-soft);
+    width:24px; height:24px; border:1px solid var(--line-soft);
     border-radius:999px; background:#fff; color:var(--muted);
     cursor:pointer; font-size:13px; font-weight:700; line-height:1;
     display:flex; align-items:center; justify-content:center;
@@ -442,7 +484,7 @@
     box-shadow:0 2px 10px rgba(26,77,140,.06);
     display:flex; flex-direction:column; gap:10px; align-items:stretch;
   }
-  .cliente-saldo{ font-size:12px; font-weight:700; width:100%; }
+  .cliente-saldo{ font-size:11px; font-weight:700; width:100%; }
   .cliente-saldo.deuda{ color:#b45309; }
   .cliente-saldo.al-dia{ color:#1f7a3f; }
 
@@ -1106,6 +1148,12 @@
     .catalogo-scroll{ max-height:min(44vh, 360px); }
     .boleta-scroll{ max-height:min(40vh, 320px); }
     .lista-side-scroll{ max-height:160px; }
+    .clientes-scroll{ max-height:min(20vh, 104px); margin-top:6px; }
+
+    #card-clientes{ padding:12px 10px 10px; }
+    #card-clientes h2{ margin-bottom:8px; font-size:15px; }
+    #card-clientes #form-cliente .field{ margin-bottom:6px; }
+    #card-clientes #cl-submit-btn{ padding:8px 10px; font-size:12.5px; }
 
     table{ font-size:13px; }
     tbody td{ padding:9px 6px; }
@@ -1165,28 +1213,31 @@
 
     /* —— Clientes, notas, cobranza y recordatorios —— */
     .clientes-cobranza-resumen{
-      font-size:12px; padding:10px; line-height:1.45;
+      font-size:11.5px; padding:7px 9px; margin-top:6px; line-height:1.35;
     }
+    .clientes-scroll .empty-state{ padding:8px 6px; font-size:12.5px; }
 
-    .cliente-item-wrap{ gap:10px; }
+    .cliente-item-wrap{ gap:5px; }
 
-    .cliente-item{ padding:10px 10px 8px; }
+    .cliente-item{ padding:6px 7px 5px; gap:5px; }
 
     .cliente-item-head{
       grid-template-columns:minmax(0, 1fr) auto;
-      gap:6px 8px;
+      gap:5px 6px;
     }
     .cliente-item-head .acciones .btn-icon{
-      width:34px; height:34px; font-size:15px;
+      width:32px; height:32px; font-size:14px;
     }
 
     .cliente-notas-block{
-      padding:8px 9px 9px; border-left-width:3px;
+      padding:6px 8px; border-left-width:3px;
     }
     .cliente-nota-chip{
-      column-gap:7px; padding:7px 9px;
+      column-gap:6px; padding:5px 7px;
     }
-    .cliente-nota-borrar{ width:28px; height:28px; }
+    .cliente-nota-borrar{ width:26px; height:26px; }
+
+    .cliente-saldo{ font-size:11px; }
 
     .cliente-nota-form{
       flex-direction:column; align-items:stretch;
@@ -1196,8 +1247,6 @@
       width:100%; justify-content:stretch;
     }
     .cliente-nota-form-acciones .btn{ flex:1; min-width:0; justify-content:center; }
-
-    .cliente-saldo{ font-size:13px; }
 
     .historial-detalle-overlay{
       padding:max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom));
@@ -1294,6 +1343,8 @@
     .stepper button{ width:28px; height:28px; font-size:14px; }
     .stepper input{ width:34px; font-size:12px; }
     .cat-filtro-btn{ padding:5px 10px; font-size:11.5px; }
+
+    .clientes-scroll{ max-height:min(18vh, 92px); }
 
     .cliente-notas-etiqueta{ font-size:9px; }
 

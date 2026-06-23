@@ -1262,7 +1262,7 @@ return nuevo;
 
   function renderClientes(){
     var wrap = document.getElementById('lista-clientes-wrap');
-    if (wrap) wrap.className = 'scroll-panel lista-side-scroll';
+    if (wrap) wrap.className = 'scroll-panel clientes-scroll';
     var countEl = document.getElementById('clientes-count');
     if (countEl) countEl.textContent = '(' + clientes.length + ')';
 
